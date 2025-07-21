@@ -1,0 +1,189 @@
+/**
+ * ACF PHP-to-JSON Converter Admin Styles
+ */
+
+.acf-php-json-converter-wrap {
+    margin: 20px 0;
+}
+
+.acf-php-json-converter-tabs {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+}
+
+.acf-php-json-converter-tabs .nav-tab {
+    font-size: 14px;
+}
+
+.acf-php-json-converter-tab-content {
+    display: none;
+}
+
+.acf-php-json-converter-tab-content.active {
+    display: block;
+}
+
+.acf-php-json-converter-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.acf-php-json-converter-card h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.acf-php-json-converter-progress {
+    height: 20px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.acf-php-json-converter-progress-bar {
+    float: left;
+    width: 0;
+    height: 100%;
+    font-size: 12px;
+    line-height: 20px;
+    color: #fff;
+    text-align: center;
+    background-color: #0073aa;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+    transition: width 0.6s ease;
+}
+
+.acf-php-json-converter-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.acf-php-json-converter-table th,
+.acf-php-json-converter-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.acf-php-json-converter-table th {
+    background-color: #f9f9f9;
+}
+
+.acf-php-json-converter-notice {
+    padding: 10px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.acf-php-json-converter-notice-success {
+    background-color: #ecf7ed;
+    border-left: 4px solid #46b450;
+}
+
+.acf-php-json-converter-notice-error {
+    background-color: #fbeaea;
+    border-left: 4px solid #dc3232;
+}
+
+.acf-php-json-converter-notice-warning {
+    background-color: #fff8e5;
+    border-left: 4px solid #ffb900;
+}
+
+.acf-php-json-converter-notice-info {
+    background-color: #e5f5fa;
+    border-left: 4px solid #00a0d2;
+}
+
+.acf-php-json-converter-modal {
+    display: none;
+    position: fixed;
+    z-index: 100000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.acf-php-json-converter-modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+}
+
+.acf-php-json-converter-modal-header {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 15px;
+}
+
+.acf-php-json-converter-modal-footer {
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    margin-top: 15px;
+    text-align: right;
+}
+
+.acf-php-json-converter-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.acf-php-json-converter-close:hover,
+.acf-php-json-converter-close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.acf-php-json-converter-code {
+    background-color: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    padding: 10px;
+    overflow: auto;
+    max-height: 400px;
+    font-family: monospace;
+    white-space: pre;
+}
+
+.acf-php-json-converter-spinner {
+    background: url(../images/spinner.gif) no-repeat;
+    background-size: 20px 20px;
+    display: inline-block;
+    visibility: hidden;
+    vertical-align: middle;
+    opacity: 0.7;
+    filter: alpha(opacity=70);
+    width: 20px;
+    height: 20px;
+    margin: 0 10px;
+}
+
+.acf-php-json-converter-spinner.is-active {
+    visibility: visible;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 782px) {
+    .acf-php-json-converter-table {
+        display: block;
+        overflow-x: auto;
+    }
+}
