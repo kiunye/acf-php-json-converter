@@ -5,6 +5,10 @@
  * @since      1.0.0
  * @package    ACF_PHP_JSON_Converter
  * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @author     Your Name <your.email@example.com>
+ * @license    GPL-2.0+
+ * @link       https://example.com
+ * @category   Utilities
  */
 
 namespace ACF_PHP_JSON_Converter\Utilities;
@@ -13,7 +17,14 @@ namespace ACF_PHP_JSON_Converter\Utilities;
  * Logger Utility Class.
  *
  * Handles logging for the plugin with different log levels,
- * log rotation, and log retrieval functionality.
+ * log rotation, log retrieval functionality, and error tracking.
+ *
+ * @package    ACF_PHP_JSON_Converter
+ * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @author     Your Name <your.email@example.com>
+ * @license    GPL-2.0+
+ * @link       https://example.com
+ * @category   Utilities
  */
 class Logger {
 
@@ -84,6 +95,24 @@ class Logger {
      * @var      string    $option_name    Option name.
      */
     private $option_name = 'acf_php_json_converter_logs';
+    
+    /**
+     * Option name for storing error statistics.
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      string    $error_stats_option    Option name for error statistics.
+     */
+    private $error_stats_option = 'acf_php_json_converter_error_stats';
+    
+    /**
+     * Maximum age of logs in days before cleanup.
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      int    $max_log_age    Maximum age of logs in days.
+     */
+    private $max_log_age = 30;
 
     /**
      * Initialize the class and set its properties.
@@ -128,6 +157,17 @@ class Logger {
         $this->max_file_size = apply_filters('acf_php_json_converter_max_log_file_size', $this->max_file_size);
         $this->max_files = apply_filters('acf_php_json_converter_max_log_files', $this->max_files);
         $this->max_db_entries = apply_filters('acf_php_json_converter_max_db_entries', $this->max_db_entries);
+        $this->max_log_age = apply_filters('acf_php_json_converter_max_log_age', $this->max_log_age);
+        
+        // Schedule log cleanup if not already scheduled
+        if (!wp_next_scheduled('acf_php_json_converter_log_cleanup')) {
+            wp_schedule_event(time(), 'daily', 'acf_php_json_converter_log_cleanup');
+        }
+        
+        // Initialize error statistics if they don't exist
+        if (false === get_option($this->error_stats_option)) {
+            $this->initialize_error_stats();
+        }
     }
 
     /**
@@ -314,6 +354,11 @@ class Logger {
         // Limit number of logs
         if (count($logs) > $this->max_db_entries) {
             $logs = array_slice($logs, 0, $this->max_db_entries);
+        }
+        
+        // Update error statistics for errors and warnings
+        if (in_array($log_entry['level'], array('error', 'warning'))) {
+            $this->update_error_stats($log_entry);
         }
         
         // Update logs in database
@@ -552,5 +597,226 @@ class Logger {
         $settings['logging_level'] = $level;
         
         return update_option('acf_php_json_converter_settings', $settings);
+    }
+    /**
+     * Initialize error statistics.
+     *
+     * @since    1.0.0
+     * @return   bool      True on success, false on failure.
+     */
+    private function initialize_error_stats() {
+        $stats = array(
+            'error_count' => array(
+                'error'   => 0,
+                'warning' => 0,
+                'info'    => 0,
+                'debug'   => 0,
+            ),
+            'first_error_time' => current_time('mysql'),
+            'last_error_time'  => current_time('mysql'),
+            'most_frequent'    => array(),
+        );
+        
+        return update_option($this->error_stats_option, $stats);
+    }
+
+    /**
+     * Update error statistics.
+     *
+     * @since    1.0.0
+     * @param    array     $log_entry    Log entry.
+     * @return   bool      True on success, false on failure.
+     */
+    private function update_error_stats($log_entry) {
+        // Only track errors and warnings
+        if (!in_array($log_entry['level'], array('error', 'warning'))) {
+            return false;
+        }
+        
+        // Get current stats
+        $stats = get_option($this->error_stats_option, array());
+        
+        // If stats don't exist, initialize them
+        if (empty($stats)) {
+            $this->initialize_error_stats();
+            $stats = get_option($this->error_stats_option, array());
+        }
+        
+        // Update error count
+        if (isset($stats['error_count'][$log_entry['level']])) {
+            $stats['error_count'][$log_entry['level']]++;
+        } else {
+            $stats['error_count'][$log_entry['level']] = 1;
+        }
+        
+        // Update last error time
+        $stats['last_error_time'] = $log_entry['timestamp'];
+        
+        // Update most frequent errors
+        $error_key = md5($log_entry['message'] . $log_entry['file'] . $log_entry['line']);
+        
+        if (isset($stats['most_frequent'][$error_key])) {
+            $stats['most_frequent'][$error_key]['count']++;
+            $stats['most_frequent'][$error_key]['last_time'] = $log_entry['timestamp'];
+        } else {
+            $stats['most_frequent'][$error_key] = array(
+                'message'   => $log_entry['message'],
+                'level'     => $log_entry['level'],
+                'file'      => $log_entry['file'],
+                'line'      => $log_entry['line'],
+                'count'     => 1,
+                'first_time' => $log_entry['timestamp'],
+                'last_time'  => $log_entry['timestamp'],
+            );
+        }
+        
+        // Limit most frequent errors to top 10
+        if (count($stats['most_frequent']) > 10) {
+            // Sort by count in descending order
+            uasort($stats['most_frequent'], function($a, $b) {
+                return $b['count'] - $a['count'];
+            });
+            
+            // Keep only top 10
+            $stats['most_frequent'] = array_slice($stats['most_frequent'], 0, 10, true);
+        }
+        
+        return update_option($this->error_stats_option, $stats);
+    }
+
+    /**
+     * Get error statistics.
+     *
+     * @since    1.0.0
+     * @return   array     Error statistics.
+     */
+    public function get_error_stats() {
+        return get_option($this->error_stats_option, array());
+    }
+
+    /**
+     * Reset error statistics.
+     *
+     * @since    1.0.0
+     * @return   bool      True on success, false on failure.
+     */
+    public function reset_error_stats() {
+        return $this->initialize_error_stats();
+    }
+
+    /**
+     * Log an exception.
+     *
+     * @since    1.0.0
+     * @param    \Exception|\Throwable $exception    Exception to log.
+     * @param    string                $level        Log level (error, warning, info, debug).
+     * @param    array                 $context      Additional context data.
+     * @return   bool                  True on success, false on failure.
+     */
+    public function log_exception($exception, $level = 'error', $context = array()) {
+        // Add exception details to context
+        $context['exception'] = array(
+            'class'     => get_class($exception),
+            'code'      => $exception->getCode(),
+            'message'   => $exception->getMessage(),
+            'file'      => $exception->getFile(),
+            'line'      => $exception->getLine(),
+            'trace'     => $exception->getTraceAsString(),
+        );
+        
+        // Log the exception
+        return $this->log(
+            sprintf('Exception: %s: %s', get_class($exception), $exception->getMessage()),
+            $level,
+            $context
+        );
+    }
+
+    /**
+     * Clean up old logs.
+     *
+     * @since    1.0.0
+     * @return   bool      True on success, false on failure.
+     */
+    public function cleanup_old_logs() {
+        // Get logs from database
+        $logs = get_option($this->option_name, array());
+        
+        if (empty($logs)) {
+            return true;
+        }
+        
+        // Calculate cutoff time
+        $cutoff_time = strtotime('-' . $this->max_log_age . ' days');
+        
+        // Filter logs to keep only recent ones
+        $filtered_logs = array_filter($logs, function($log) use ($cutoff_time) {
+            $log_time = strtotime($log['timestamp']);
+            return $log_time >= $cutoff_time;
+        });
+        
+        // Update logs in database if any were removed
+        if (count($filtered_logs) < count($logs)) {
+            return update_option($this->option_name, $filtered_logs);
+        }
+        
+        return true;
+    }
+
+    /**
+     * Get log file size.
+     *
+     * @since    1.0.0
+     * @param    int       $file_number    Log file number (0 for current, 1-5 for rotated logs).
+     * @return   int       File size in bytes.
+     */
+    public function get_log_file_size($file_number = 0) {
+        // Determine log file path
+        $log_file = $this->log_file;
+        if ($file_number > 0) {
+            $log_dir = dirname($this->log_file);
+            $log_file = trailingslashit($log_dir) . 'acf-php-json-converter.' . $file_number . '.log';
+        }
+        
+        // Check if file exists
+        if (!file_exists($log_file)) {
+            return 0;
+        }
+        
+        return filesize($log_file);
+    }
+
+    /**
+     * Get total log size.
+     *
+     * @since    1.0.0
+     * @return   int       Total size of all log files in bytes.
+     */
+    public function get_total_log_size() {
+        $total_size = 0;
+        
+        // Add current log file size
+        $total_size += $this->get_log_file_size();
+        
+        // Add rotated log file sizes
+        for ($i = 1; $i <= $this->max_files; $i++) {
+            $total_size += $this->get_log_file_size($i);
+        }
+        
+        return $total_size;
+    }
+
+    /**
+     * Format file size for display.
+     *
+     * @since    1.0.0
+     * @param    int       $size    Size in bytes.
+     * @return   string    Formatted size.
+     */
+    public function format_file_size($size) {
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        $power = $size > 0 ? floor(log($size, 1024)) : 0;
+        
+        return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
     }
 }

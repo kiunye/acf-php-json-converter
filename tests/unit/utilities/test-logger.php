@@ -253,6 +253,106 @@ class LoggerTest extends WP_UnitTestCase {
         // Check if log level remains unchanged
         $this->assertEquals('info', $this->logger->get_current_level());
     }
+    
+    /**
+     * Test error statistics tracking.
+     */
+    public function test_error_statistics() {
+        // Log some errors and warnings
+        $this->logger->error('Test error 1');
+        $this->logger->error('Test error 2');
+        $this->logger->warning('Test warning');
+        
+        // Get error statistics
+        $stats = $this->logger->get_error_stats();
+        
+        // Check if statistics were recorded
+        $this->assertArrayHasKey('error_count', $stats);
+        $this->assertArrayHasKey('error', $stats['error_count']);
+        $this->assertArrayHasKey('warning', $stats['error_count']);
+        
+        // Check error counts
+        $this->assertGreaterThanOrEqual(2, $stats['error_count']['error']);
+        $this->assertGreaterThanOrEqual(1, $stats['error_count']['warning']);
+        
+        // Check most frequent errors
+        $this->assertArrayHasKey('most_frequent', $stats);
+        $this->assertNotEmpty($stats['most_frequent']);
+        
+        // Reset error statistics
+        $this->assertTrue($this->logger->reset_error_stats());
+        
+        // Check if statistics were reset
+        $stats = $this->logger->get_error_stats();
+        $this->assertEquals(0, $stats['error_count']['error']);
+        $this->assertEquals(0, $stats['error_count']['warning']);
+        $this->assertEmpty($stats['most_frequent']);
+    }
+    
+    /**
+     * Test exception logging.
+     */
+    public function test_log_exception() {
+        // Create an exception
+        $exception = new \Exception('Test exception', 123);
+        
+        // Log the exception
+        $this->assertTrue($this->logger->log_exception($exception));
+        
+        // Get logs
+        $logs = $this->logger->get_logs('error', 1);
+        
+        // Check if exception was logged
+        $this->assertCount(1, $logs);
+        $this->assertEquals('error', $logs[0]['level']);
+        $this->assertStringContainsString('Exception: Exception: Test exception', $logs[0]['message']);
+        
+        // Check exception details in context
+        $this->assertArrayHasKey('exception', $logs[0]['context']);
+        $this->assertEquals('Exception', $logs[0]['context']['exception']['class']);
+        $this->assertEquals(123, $logs[0]['context']['exception']['code']);
+        $this->assertEquals('Test exception', $logs[0]['context']['exception']['message']);
+    }
+    
+    /**
+     * Test log cleanup.
+     */
+    public function test_log_cleanup() {
+        // Log some messages
+        $this->logger->info('Test cleanup message 1');
+        $this->logger->info('Test cleanup message 2');
+        
+        // Check if logs exist
+        $logs_before = $this->logger->get_logs();
+        $this->assertNotEmpty($logs_before);
+        
+        // Run cleanup
+        $this->assertTrue($this->logger->cleanup_old_logs());
+    }
+    
+    /**
+     * Test log file size methods.
+     */
+    public function test_log_file_size() {
+        // Log a message to ensure file exists
+        $this->logger->info('Test file size message');
+        
+        // Get log file size
+        $size = $this->logger->get_log_file_size();
+        
+        // Check if size is greater than 0
+        $this->assertGreaterThan(0, $size);
+        
+        // Get total log size
+        $total_size = $this->logger->get_total_log_size();
+        
+        // Check if total size is at least as large as current file
+        $this->assertGreaterThanOrEqual($size, $total_size);
+        
+        // Test format file size
+        $formatted_size = $this->logger->format_file_size(1024);
+        $this->assertEquals('1.00 KB', $formatted_size);
+    }
 
     /**
      * Test get_level_name method.
