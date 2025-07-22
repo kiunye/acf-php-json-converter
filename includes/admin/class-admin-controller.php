@@ -97,7 +97,11 @@ class Admin_Controller {
      * @since    1.0.0
      */
     public function add_admin_menu() {
-        // This is a placeholder. Full implementation will be added in task 6.1
+        // Check if user has required capabilities
+        if (!$this->security->check_capability('manage_options')) {
+            return;
+        }
+
         add_management_page(
             __('ACF PHP-JSON Converter', 'acf-php-json-converter'),
             __('ACF PHP-JSON Converter', 'acf-php-json-converter'),
@@ -113,13 +117,37 @@ class Admin_Controller {
      * @since    1.0.0
      */
     public function render_admin_page() {
-        // This is a placeholder. Full implementation will be added in task 6.2
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <p><?php _e('This plugin is currently in development. Full functionality will be available soon.', 'acf-php-json-converter'); ?></p>
-        </div>
-        <?php
+        // Check user capabilities
+        if (!$this->security->check_capability('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'acf-php-json-converter'));
+        }
+
+        // Render the admin page template
+        $this->render_template('admin-page');
+    }
+
+    /**
+     * Render a template file.
+     *
+     * @since    1.0.0
+     * @param    string    $template_name    The template name (without .php extension).
+     * @param    array     $args             Arguments to pass to the template.
+     */
+    protected function render_template($template_name, $args = array()) {
+        $template_path = ACF_PHP_JSON_CONVERTER_DIR . 'templates/' . $template_name . '.php';
+        
+        if (!file_exists($template_path)) {
+            $this->logger->error('Template file not found: ' . $template_path);
+            return;
+        }
+
+        // Extract args to make them available in template
+        if (!empty($args)) {
+            extract($args, EXTR_SKIP);
+        }
+
+        // Include the template
+        include $template_path;
     }
 
     /**
@@ -168,10 +196,82 @@ class Admin_Controller {
      * @since    1.0.0
      */
     public function ajax_scan_theme() {
-        // This is a placeholder. Full implementation will be added in task 7.1
-        wp_send_json_success(array(
-            'message' => __('Scanning functionality will be implemented soon.', 'acf-php-json-converter'),
-        ));
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get theme path from request (optional)
+            $theme_path = isset($_POST['theme_path']) ? $this->security->sanitize_text_field($_POST['theme_path']) : '';
+            
+            // Use cache by default, but allow forcing refresh
+            $use_cache = !isset($_POST['force_refresh']) || $_POST['force_refresh'] !== 'true';
+            
+            $this->logger->info('Starting theme scan via AJAX', array(
+                'theme_path' => $theme_path,
+                'use_cache' => $use_cache
+            ));
+            
+            // Perform the scan
+            $scan_results = $this->scanner->scan_theme_files($theme_path, $use_cache);
+            
+            if ($scan_results['status'] === 'error') {
+                wp_send_json_error(array(
+                    'message' => __('Scan completed with errors. Check the error log for details.', 'acf-php-json-converter'),
+                    'errors' => $scan_results['errors'],
+                    'warnings' => $scan_results['warnings'],
+                    'execution_time' => $scan_results['execution_time']
+                ));
+                return;
+            }
+            
+            // Format field groups for display
+            $formatted_field_groups = array();
+            foreach ($scan_results['field_groups'] as $field_group) {
+                $formatted_field_groups[] = array(
+                    'key' => $field_group['key'],
+                    'title' => $field_group['title'],
+                    'source_file' => isset($field_group['_acf_php_json_converter']['source_file']) 
+                        ? basename($field_group['_acf_php_json_converter']['source_file']) 
+                        : 'Unknown',
+                    'source_file_full' => isset($field_group['_acf_php_json_converter']['source_file']) 
+                        ? $field_group['_acf_php_json_converter']['source_file'] 
+                        : '',
+                    'field_count' => is_array($field_group['fields']) ? count($field_group['fields']) : 0,
+                    'modified_date' => isset($field_group['_acf_php_json_converter']['modified_date']) 
+                        ? date('Y-m-d H:i:s', $field_group['_acf_php_json_converter']['modified_date']) 
+                        : 'Unknown',
+                    'has_location' => isset($field_group['location']) && !empty($field_group['location']),
+                    'menu_order' => isset($field_group['menu_order']) ? $field_group['menu_order'] : 0,
+                    'position' => isset($field_group['position']) ? $field_group['position'] : 'normal',
+                    'style' => isset($field_group['style']) ? $field_group['style'] : 'default'
+                );
+            }
+            
+            wp_send_json_success(array(
+                'message' => sprintf(
+                    _n(
+                        'Scan completed successfully! Found %d field group.',
+                        'Scan completed successfully! Found %d field groups.',
+                        $scan_results['count'],
+                        'acf-php-json-converter'
+                    ),
+                    $scan_results['count']
+                ),
+                'field_groups' => $formatted_field_groups,
+                'count' => $scan_results['count'],
+                'warnings' => $scan_results['warnings'],
+                'execution_time' => $scan_results['execution_time'],
+                'timestamp' => $scan_results['timestamp']
+            ));
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX scan theme error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while scanning theme files.', 'acf-php-json-converter'),
+            ));
+        }
     }
 
     /**
@@ -180,10 +280,107 @@ class Admin_Controller {
      * @since    1.0.0
      */
     public function ajax_convert_php_to_json() {
-        // This is a placeholder. Full implementation will be added in task 7.2
-        wp_send_json_success(array(
-            'message' => __('Conversion functionality will be implemented soon.', 'acf-php-json-converter'),
-        ));
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group key from request
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_text_field($_POST['field_group_key']) : '';
+            
+            if (empty($field_group_key)) {
+                wp_send_json_error(array(
+                    'message' => __('Field group key is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            $this->logger->info('Converting PHP field group to JSON', array(
+                'field_group_key' => $field_group_key
+            ));
+            
+            // Get cached scan results to find the field group
+            $scan_results = $this->scanner->get_cached_results();
+            
+            if (!$scan_results || empty($scan_results['field_groups'])) {
+                wp_send_json_error(array(
+                    'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Find the specific field group
+            $field_group = null;
+            foreach ($scan_results['field_groups'] as $group) {
+                if ($group['key'] === $field_group_key) {
+                    $field_group = $group;
+                    break;
+                }
+            }
+            
+            if (!$field_group) {
+                wp_send_json_error(array(
+                    'message' => __('Field group not found in scan results.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Convert to JSON format using converter service
+            $conversion_result = $this->converter->convert_php_to_json($field_group);
+            
+            if (!$conversion_result['success']) {
+                wp_send_json_error(array(
+                    'message' => __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
+                    'errors' => $conversion_result['errors'],
+                ));
+                return;
+            }
+            
+            // Create backup before saving
+            $backup_files = array();
+            $acf_json_dir = $this->file_manager->get_acf_json_directory();
+            if (!empty($acf_json_dir)) {
+                $existing_file = trailingslashit($acf_json_dir) . $field_group['key'] . '.json';
+                if (file_exists($existing_file)) {
+                    $backup_files[] = $existing_file;
+                }
+            }
+            
+            if (!empty($backup_files)) {
+                $backup_path = $this->file_manager->create_backup($backup_files);
+                if (empty($backup_path)) {
+                    $this->logger->warning('Failed to create backup before conversion');
+                }
+            }
+            
+            // Write JSON file to acf-json directory
+            $filename = $field_group['key'] . '.json';
+            $write_result = $this->file_manager->write_json_file($filename, $conversion_result['data']);
+            
+            if (!$write_result) {
+                wp_send_json_error(array(
+                    'message' => __('Failed to write JSON file to acf-json directory.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            wp_send_json_success(array(
+                'message' => sprintf(
+                    __('Field group "%s" converted and saved to acf-json directory successfully!', 'acf-php-json-converter'),
+                    $field_group['title']
+                ),
+                'field_group_key' => $field_group['key'],
+                'field_group_title' => $field_group['title'],
+                'filename' => $filename,
+            ));
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX convert PHP to JSON error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while converting PHP to JSON.', 'acf-php-json-converter'),
+            ));
+        }
     }
 
     /**
@@ -192,10 +389,22 @@ class Admin_Controller {
      * @since    1.0.0
      */
     public function ajax_convert_json_to_php() {
-        // This is a placeholder. Full implementation will be added in task 8.2
-        wp_send_json_success(array(
-            'message' => __('Conversion functionality will be implemented soon.', 'acf-php-json-converter'),
-        ));
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // This is a placeholder. Full implementation will be added in task 8.2
+            wp_send_json_success(array(
+                'message' => __('Conversion functionality will be implemented soon.', 'acf-php-json-converter'),
+            ));
+        } catch (Exception $e) {
+            $this->logger->error('AJAX convert JSON to PHP error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while converting JSON to PHP.', 'acf-php-json-converter'),
+            ));
+        }
     }
 
     /**
@@ -204,9 +413,241 @@ class Admin_Controller {
      * @since    1.0.0
      */
     public function ajax_save_settings() {
-        // This is a placeholder. Full implementation will be added in task 9.1
-        wp_send_json_success(array(
-            'message' => __('Settings functionality will be implemented soon.', 'acf-php-json-converter'),
-        ));
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // This is a placeholder. Full implementation will be added in task 9.1
+            wp_send_json_success(array(
+                'message' => __('Settings functionality will be implemented soon.', 'acf-php-json-converter'),
+            ));
+        } catch (Exception $e) {
+            $this->logger->error('AJAX save settings error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while saving settings.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for previewing field group conversion.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_preview_field_group() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group key from request
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_text_field($_POST['field_group_key']) : '';
+            
+            if (empty($field_group_key)) {
+                wp_send_json_error(array(
+                    'message' => __('Field group key is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            $this->logger->info('Previewing field group conversion', array(
+                'field_group_key' => $field_group_key
+            ));
+            
+            // Get cached scan results to find the field group
+            $scan_results = $this->scanner->get_cached_results();
+            
+            if (!$scan_results || empty($scan_results['field_groups'])) {
+                wp_send_json_error(array(
+                    'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Find the specific field group
+            $field_group = null;
+            foreach ($scan_results['field_groups'] as $group) {
+                if ($group['key'] === $field_group_key) {
+                    $field_group = $group;
+                    break;
+                }
+            }
+            
+            if (!$field_group) {
+                wp_send_json_error(array(
+                    'message' => __('Field group not found in scan results.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Convert to JSON format using converter service
+            $conversion_result = $this->converter->convert_php_to_json($field_group);
+            
+            if (!$conversion_result['success']) {
+                wp_send_json_error(array(
+                    'message' => __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
+                    'errors' => $conversion_result['errors'],
+                ));
+                return;
+            }
+            
+            wp_send_json_success(array(
+                'title' => $field_group['title'],
+                'key' => $field_group['key'],
+                'json' => $conversion_result['data'],
+                'message' => __('Field group preview generated successfully.', 'acf-php-json-converter'),
+            ));
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX preview field group error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while previewing field group.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for downloading field group JSON.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_download_field_group() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group key from request
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_text_field($_POST['field_group_key']) : '';
+            
+            if (empty($field_group_key)) {
+                wp_send_json_error(array(
+                    'message' => __('Field group key is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            $this->logger->info('Downloading field group JSON', array(
+                'field_group_key' => $field_group_key
+            ));
+            
+            // Get cached scan results to find the field group
+            $scan_results = $this->scanner->get_cached_results();
+            
+            if (!$scan_results || empty($scan_results['field_groups'])) {
+                wp_send_json_error(array(
+                    'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Find the specific field group
+            $field_group = null;
+            foreach ($scan_results['field_groups'] as $group) {
+                if ($group['key'] === $field_group_key) {
+                    $field_group = $group;
+                    break;
+                }
+            }
+            
+            if (!$field_group) {
+                wp_send_json_error(array(
+                    'message' => __('Field group not found in scan results.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Convert to JSON format using converter service
+            $conversion_result = $this->converter->convert_php_to_json($field_group);
+            
+            if (!$conversion_result['success']) {
+                wp_send_json_error(array(
+                    'message' => __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
+                    'errors' => $conversion_result['errors'],
+                ));
+                return;
+            }
+            
+            // Generate filename
+            $filename = $field_group['key'] . '.json';
+            
+            // Set headers for file download
+            header('Content-Type: application/json');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Content-Length: ' . strlen(wp_json_encode($conversion_result['data'], JSON_PRETTY_PRINT)));
+            
+            // Output JSON data
+            echo wp_json_encode($conversion_result['data'], JSON_PRETTY_PRINT);
+            
+            // Log successful download
+            $this->logger->info('Field group JSON downloaded successfully', array(
+                'field_group_key' => $field_group_key,
+                'filename' => $filename
+            ));
+            
+            exit;
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX download field group error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while downloading field group.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for batch processing field groups.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_batch_process() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // This is a placeholder. Full implementation will be added in task 8.1
+            wp_send_json_success(array(
+                'message' => __('Batch processing functionality will be implemented soon.', 'acf-php-json-converter'),
+            ));
+        } catch (Exception $e) {
+            $this->logger->error('AJAX batch process error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while batch processing.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * Verify AJAX request nonce and capabilities.
+     *
+     * @since    1.0.0
+     * @return   bool    True if request is valid, false otherwise.
+     */
+    protected function verify_ajax_request() {
+        // Check nonce
+        if (!$this->security->verify_nonce($_POST['nonce'] ?? '', 'acf_php_json_converter_nonce')) {
+            $this->logger->warning('AJAX request failed nonce verification');
+            wp_send_json_error(array(
+                'message' => __('Security check failed. Please refresh the page and try again.', 'acf-php-json-converter'),
+            ));
+            return false;
+        }
+
+        // Check user capabilities
+        if (!$this->security->check_capability('manage_options')) {
+            $this->logger->warning('AJAX request failed capability check');
+            wp_send_json_error(array(
+                'message' => __('You do not have sufficient permissions to perform this action.', 'acf-php-json-converter'),
+            ));
+            return false;
+        }
+
+        return true;
     }
 }

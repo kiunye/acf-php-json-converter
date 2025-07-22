@@ -125,6 +125,9 @@ class Plugin {
         $this->loader->add_action('wp_ajax_acf_php_json_convert_php_to_json', $this->services['admin'], 'ajax_convert_php_to_json');
         $this->loader->add_action('wp_ajax_acf_php_json_convert_json_to_php', $this->services['admin'], 'ajax_convert_json_to_php');
         $this->loader->add_action('wp_ajax_acf_php_json_save_settings', $this->services['admin'], 'ajax_save_settings');
+        $this->loader->add_action('wp_ajax_acf_php_json_preview_field_group', $this->services['admin'], 'ajax_preview_field_group');
+        $this->loader->add_action('wp_ajax_acf_php_json_download_field_group', $this->services['admin'], 'ajax_download_field_group');
+        $this->loader->add_action('wp_ajax_acf_php_json_batch_process', $this->services['admin'], 'ajax_batch_process');
     }
 
     /**

@@ -68,6 +68,7 @@ class Converter_Service {
     public function convert_php_to_json($php_data) {
         // Lazy load the converter
         if (!$this->php_to_json_converter) {
+            require_once ACF_PHP_JSON_CONVERTER_DIR . 'includes/converters/class-php-to-json-converter.php';
             $this->php_to_json_converter = new \ACF_PHP_JSON_Converter\Converters\PHP_To_JSON_Converter($this->logger);
         }
         
