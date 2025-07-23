@@ -395,10 +395,61 @@ class Admin_Controller {
         }
 
         try {
-            // This is a placeholder. Full implementation will be added in task 8.2
-            wp_send_json_success(array(
-                'message' => __('Conversion functionality will be implemented soon.', 'acf-php-json-converter'),
+            // Get JSON input from request
+            $json_input = isset($_POST['json_input']) ? wp_unslash($_POST['json_input']) : '';
+            
+            if (empty($json_input)) {
+                wp_send_json_error(array(
+                    'message' => __('JSON input is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            $this->logger->info('Converting JSON to PHP', array(
+                'json_length' => strlen($json_input)
             ));
+            
+            // Validate JSON format
+            $json_data = json_decode($json_input, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                wp_send_json_error(array(
+                    'message' => sprintf(
+                        __('Invalid JSON format: %s', 'acf-php-json-converter'),
+                        json_last_error_msg()
+                    ),
+                ));
+                return;
+            }
+            
+            // Basic ACF field group validation
+            if (!is_array($json_data) || empty($json_data['key']) || empty($json_data['title'])) {
+                wp_send_json_error(array(
+                    'message' => __('JSON does not appear to be a valid ACF field group. Missing required "key" or "title" fields.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Convert JSON to PHP using converter service
+            $conversion_result = $this->converter->convert_json_to_php($json_data);
+            
+            if (!$conversion_result['success']) {
+                wp_send_json_error(array(
+                    'message' => __('Failed to convert JSON to PHP.', 'acf-php-json-converter'),
+                    'errors' => $conversion_result['errors'],
+                ));
+                return;
+            }
+            
+            wp_send_json_success(array(
+                'message' => sprintf(
+                    __('Field group "%s" converted to PHP successfully!', 'acf-php-json-converter'),
+                    $json_data['title']
+                ),
+                'php_code' => $conversion_result['data'],
+                'field_group_key' => $json_data['key'],
+                'field_group_title' => $json_data['title'],
+            ));
+            
         } catch (Exception $e) {
             $this->logger->error('AJAX convert JSON to PHP error: ' . $e->getMessage());
             wp_send_json_error(array(
@@ -611,16 +662,170 @@ class Admin_Controller {
         }
 
         try {
-            // This is a placeholder. Full implementation will be added in task 8.1
-            wp_send_json_success(array(
-                'message' => __('Batch processing functionality will be implemented soon.', 'acf-php-json-converter'),
+            // Get field group keys and direction from request
+            $field_group_keys = isset($_POST['field_group_keys']) ? $_POST['field_group_keys'] : array();
+            $direction = isset($_POST['direction']) ? $this->security->sanitize_text_field($_POST['direction']) : 'php_to_json';
+            
+            if (empty($field_group_keys) || !is_array($field_group_keys)) {
+                wp_send_json_error(array(
+                    'message' => __('No field groups selected for batch processing.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Sanitize field group keys
+            $field_group_keys = array_map(array($this->security, 'sanitize_text_field'), $field_group_keys);
+            
+            $this->logger->info('Starting batch processing', array(
+                'field_group_keys' => $field_group_keys,
+                'direction' => $direction,
+                'count' => count($field_group_keys)
             ));
+            
+            $results = array(
+                'success' => array(),
+                'errors' => array(),
+                'total' => count($field_group_keys)
+            );
+            
+            if ($direction === 'php_to_json') {
+                $results = $this->batch_convert_php_to_json($field_group_keys);
+            } else {
+                wp_send_json_error(array(
+                    'message' => __('JSON to PHP batch conversion is not yet implemented.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Log batch processing results
+            $this->logger->info('Batch processing completed', array(
+                'total' => $results['total'],
+                'success_count' => count($results['success']),
+                'error_count' => count($results['errors'])
+            ));
+            
+            wp_send_json_success(array(
+                'message' => sprintf(
+                    __('Batch processing completed. %d successful, %d failed.', 'acf-php-json-converter'),
+                    count($results['success']),
+                    count($results['errors'])
+                ),
+                'results' => $results
+            ));
+            
         } catch (Exception $e) {
             $this->logger->error('AJAX batch process error: ' . $e->getMessage());
             wp_send_json_error(array(
                 'message' => __('An error occurred while batch processing.', 'acf-php-json-converter'),
             ));
         }
+    }
+    
+    /**
+     * Batch convert PHP field groups to JSON.
+     *
+     * @since    1.0.0
+     * @param    array    $field_group_keys    Array of field group keys to convert.
+     * @return   array    Results of batch conversion.
+     */
+    protected function batch_convert_php_to_json($field_group_keys) {
+        $results = array(
+            'success' => array(),
+            'errors' => array(),
+            'total' => count($field_group_keys)
+        );
+        
+        // Get cached scan results
+        $scan_results = $this->scanner->get_cached_results();
+        
+        if (!$scan_results || empty($scan_results['field_groups'])) {
+            $results['errors'][] = array(
+                'key' => 'scan_results',
+                'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter')
+            );
+            return $results;
+        }
+        
+        // Create a lookup array for faster access
+        $field_groups_lookup = array();
+        foreach ($scan_results['field_groups'] as $group) {
+            $field_groups_lookup[$group['key']] = $group;
+        }
+        
+        // Process each field group
+        foreach ($field_group_keys as $field_group_key) {
+            try {
+                // Find the field group
+                if (!isset($field_groups_lookup[$field_group_key])) {
+                    $results['errors'][] = array(
+                        'key' => $field_group_key,
+                        'message' => __('Field group not found in scan results.', 'acf-php-json-converter')
+                    );
+                    continue;
+                }
+                
+                $field_group = $field_groups_lookup[$field_group_key];
+                
+                // Convert to JSON format
+                $conversion_result = $this->converter->convert_php_to_json($field_group);
+                
+                if (!$conversion_result['success']) {
+                    $results['errors'][] = array(
+                        'key' => $field_group_key,
+                        'title' => $field_group['title'],
+                        'message' => implode(', ', $conversion_result['errors'])
+                    );
+                    continue;
+                }
+                
+                // Create backup before saving
+                $backup_files = array();
+                $acf_json_dir = $this->file_manager->get_acf_json_directory();
+                if (!empty($acf_json_dir)) {
+                    $existing_file = trailingslashit($acf_json_dir) . $field_group['key'] . '.json';
+                    if (file_exists($existing_file)) {
+                        $backup_files[] = $existing_file;
+                    }
+                }
+                
+                if (!empty($backup_files)) {
+                    $backup_path = $this->file_manager->create_backup($backup_files);
+                    if (empty($backup_path)) {
+                        $this->logger->warning('Failed to create backup for field group: ' . $field_group_key);
+                    }
+                }
+                
+                // Write JSON file
+                $filename = $field_group['key'] . '.json';
+                $write_result = $this->file_manager->write_json_file($filename, $conversion_result['data']);
+                
+                if (!$write_result) {
+                    $results['errors'][] = array(
+                        'key' => $field_group_key,
+                        'title' => $field_group['title'],
+                        'message' => __('Failed to write JSON file to acf-json directory.', 'acf-php-json-converter')
+                    );
+                    continue;
+                }
+                
+                // Success
+                $results['success'][] = array(
+                    'key' => $field_group_key,
+                    'title' => $field_group['title'],
+                    'filename' => $filename,
+                    'message' => __('Converted successfully', 'acf-php-json-converter')
+                );
+                
+            } catch (Exception $e) {
+                $this->logger->error('Error converting field group in batch: ' . $field_group_key . ' - ' . $e->getMessage());
+                $results['errors'][] = array(
+                    'key' => $field_group_key,
+                    'message' => __('An error occurred during conversion.', 'acf-php-json-converter')
+                );
+            }
+        }
+        
+        return $results;
     }
 
     /**
