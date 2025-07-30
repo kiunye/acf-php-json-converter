@@ -68,6 +68,15 @@ class Admin_Controller {
     protected $security;
 
     /**
+     * Error Handler instance.
+     *
+     * @since    1.0.0
+     * @access   protected
+     * @var      Error_Handler    $error_handler    Error Handler instance.
+     */
+    protected $error_handler;
+
+    /**
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
@@ -89,6 +98,10 @@ class Admin_Controller {
         $this->file_manager = $file_manager;
         $this->logger = $logger;
         $this->security = $security;
+        
+        // Initialize error handler with current settings
+        $settings = $this->get_plugin_settings();
+        $this->error_handler = new \ACF_PHP_JSON_Converter\Utilities\Error_Handler($this->logger, $settings);
     }
 
     /**
@@ -217,12 +230,30 @@ class Admin_Controller {
             $scan_results = $this->scanner->scan_theme_files($theme_path, $use_cache);
             
             if ($scan_results['status'] === 'error') {
-                wp_send_json_error(array(
-                    'message' => __('Scan completed with errors. Check the error log for details.', 'acf-php-json-converter'),
-                    'errors' => $scan_results['errors'],
-                    'warnings' => $scan_results['warnings'],
-                    'execution_time' => $scan_results['execution_time']
-                ));
+                $error_response = $this->error_handler->handle_error(
+                    'scan_failed',
+                    __('Theme scan completed with errors. Some files may not have been processed correctly.', 'acf-php-json-converter'),
+                    array(
+                        'errors' => $scan_results['errors'],
+                        'warnings' => $scan_results['warnings'],
+                        'execution_time' => $scan_results['execution_time']
+                    ),
+                    'warning',
+                    array(
+                        array(
+                            'label' => __('Try Force Refresh', 'acf-php-json-converter'),
+                            'action' => 'refresh_scan',
+                            'description' => __('Force a complete rescan of all theme files.')
+                        ),
+                        array(
+                            'label' => __('Check File Permissions', 'acf-php-json-converter'),
+                            'action' => 'check_permissions',
+                            'description' => __('Verify that theme files are readable.')
+                        )
+                    )
+                );
+                
+                wp_send_json_error($error_response);
                 return;
             }
             
@@ -470,16 +501,602 @@ class Admin_Controller {
         }
 
         try {
-            // This is a placeholder. Full implementation will be added in task 9.1
-            wp_send_json_success(array(
-                'message' => __('Settings functionality will be implemented soon.', 'acf-php-json-converter'),
+            // Get settings data from request
+            $auto_create_json_folder = isset($_POST['auto_create_json_folder']) ? 
+                $this->security->sanitize_text_field($_POST['auto_create_json_folder']) : '0';
+            $default_export_location = isset($_POST['default_export_location']) ? 
+                $this->security->sanitize_text_field($_POST['default_export_location']) : 'theme';
+            $logging_level = isset($_POST['logging_level']) ? 
+                $this->security->sanitize_text_field($_POST['logging_level']) : 'warning';
+            $log_retention_days = isset($_POST['log_retention_days']) ? 
+                intval($_POST['log_retention_days']) : 30;
+            $enable_debug_mode = isset($_POST['enable_debug_mode']) ? 
+                $this->security->sanitize_text_field($_POST['enable_debug_mode']) : '0';
+            $error_display_mode = isset($_POST['error_display_mode']) ? 
+                $this->security->sanitize_text_field($_POST['error_display_mode']) : 'log_only';
+            $max_error_notices = isset($_POST['max_error_notices']) ? 
+                intval($_POST['max_error_notices']) : 3;
+            $enable_error_recovery = isset($_POST['enable_error_recovery']) ? 
+                $this->security->sanitize_text_field($_POST['enable_error_recovery']) : '0';
+            $log_user_actions = isset($_POST['log_user_actions']) ? 
+                $this->security->sanitize_text_field($_POST['log_user_actions']) : '0';
+
+            // Validate settings
+            $validation_errors = $this->validate_settings(array(
+                'auto_create_json_folder' => $auto_create_json_folder,
+                'default_export_location' => $default_export_location,
+                'logging_level' => $logging_level,
+                'log_retention_days' => $log_retention_days,
+                'enable_debug_mode' => $enable_debug_mode,
+                'error_display_mode' => $error_display_mode,
+                'max_error_notices' => $max_error_notices,
+                'enable_error_recovery' => $enable_error_recovery,
+                'log_user_actions' => $log_user_actions
             ));
+
+            if (!empty($validation_errors)) {
+                wp_send_json_error(array(
+                    'message' => __('Settings validation failed.', 'acf-php-json-converter'),
+                    'errors' => $validation_errors
+                ));
+                return;
+            }
+
+            // Save settings
+            $settings = array(
+                'auto_create_json_folder' => $auto_create_json_folder === '1',
+                'default_export_location' => $default_export_location,
+                'logging_level' => $logging_level,
+                'log_retention_days' => $log_retention_days,
+                'enable_debug_mode' => $enable_debug_mode === '1',
+                'error_display_mode' => $error_display_mode,
+                'max_error_notices' => $max_error_notices,
+                'enable_error_recovery' => $enable_error_recovery === '1',
+                'log_user_actions' => $log_user_actions === '1'
+            );
+
+            $saved = update_option('acf_php_json_converter_settings', $settings);
+
+            if ($saved) {
+                // Update logger level if it changed
+                $this->logger->set_log_level($logging_level);
+
+                // Log settings change
+                $this->logger->info('Settings updated successfully', array(
+                    'settings' => $settings
+                ));
+
+                wp_send_json_success(array(
+                    'message' => __('Settings saved successfully!', 'acf-php-json-converter'),
+                    'settings' => $settings
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => __('Failed to save settings. Please try again.', 'acf-php-json-converter'),
+                ));
+            }
+
         } catch (Exception $e) {
             $this->logger->error('AJAX save settings error: ' . $e->getMessage());
             wp_send_json_error(array(
                 'message' => __('An error occurred while saving settings.', 'acf-php-json-converter'),
             ));
         }
+    }
+
+    /**
+     * AJAX handler for loading settings.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_load_settings() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $settings = $this->get_plugin_settings();
+
+            wp_send_json_success(array(
+                'settings' => $settings
+            ));
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX load settings error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while loading settings.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for clearing error log.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_clear_log() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $cleared = $this->logger->clear_log();
+
+            if ($cleared) {
+                $this->logger->info('Error log cleared by user');
+
+                wp_send_json_success(array(
+                    'message' => __('Error log cleared successfully!', 'acf-php-json-converter'),
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => __('Failed to clear error log.', 'acf-php-json-converter'),
+                ));
+            }
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX clear log error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while clearing error log.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for getting error log.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_get_error_log() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $log_entries = $this->logger->get_recent_logs(100); // Get last 100 entries
+
+            wp_send_json_success(array(
+                'log_entries' => $log_entries,
+                'count' => count($log_entries)
+            ));
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX get error log error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while retrieving error log.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for resetting settings to defaults.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_reset_settings() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $default_settings = $this->get_default_settings();
+            $saved = update_option('acf_php_json_converter_settings', $default_settings);
+
+            if ($saved) {
+                // Update logger level
+                $this->logger->set_log_level($default_settings['logging_level']);
+
+                // Log settings reset
+                $this->logger->info('Settings reset to defaults');
+
+                wp_send_json_success(array(
+                    'message' => __('Settings reset to defaults successfully!', 'acf-php-json-converter'),
+                    'settings' => $default_settings
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => __('Failed to reset settings.', 'acf-php-json-converter'),
+                ));
+            }
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX reset settings error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while resetting settings.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for cleaning up old logs.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_cleanup_logs() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $cleaned = $this->logger->cleanup_old_logs();
+
+            if ($cleaned) {
+                $this->logger->info('Old logs cleaned up by user');
+
+                wp_send_json_success(array(
+                    'message' => __('Old logs cleaned up successfully!', 'acf-php-json-converter'),
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => __('Failed to clean up old logs.', 'acf-php-json-converter'),
+                ));
+            }
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX cleanup logs error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while cleaning up logs.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for getting operation progress.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_get_progress() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $operation_id = isset($_POST['operation_id']) ? $this->security->sanitize_text_field($_POST['operation_id']) : '';
+            
+            if (empty($operation_id)) {
+                wp_send_json_error(array(
+                    'message' => __('Operation ID is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+
+            $progress_data = \ACF_PHP_JSON_Converter\Utilities\Progress_Tracker::get_progress_by_id($operation_id);
+
+            if ($progress_data === false) {
+                wp_send_json_error(array(
+                    'message' => __('Progress data not found for the specified operation.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+
+            wp_send_json_success($progress_data);
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX get progress error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while retrieving progress data.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for cancelling operations.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_cancel_operation() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            $operation_id = isset($_POST['operation_id']) ? $this->security->sanitize_text_field($_POST['operation_id']) : '';
+            
+            if (empty($operation_id)) {
+                wp_send_json_error(array(
+                    'message' => __('Operation ID is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+
+            // Set cancellation flag in transient
+            $cancellation_key = 'acf_php_json_cancel_' . $operation_id;
+            set_transient($cancellation_key, true, 3600);
+
+            $this->logger->info('Operation cancellation requested', array('operation_id' => $operation_id));
+
+            wp_send_json_success(array(
+                'message' => __('Cancellation request sent. The operation will stop at the next safe point.', 'acf-php-json-converter'),
+            ));
+
+        } catch (Exception $e) {
+            $this->logger->error('AJAX cancel operation error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while cancelling the operation.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for batch conversion with progress tracking.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_batch_convert_with_progress() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group keys from request
+            $field_group_keys = isset($_POST['field_group_keys']) ? $_POST['field_group_keys'] : array();
+            $conversion_direction = isset($_POST['conversion_direction']) ? $this->security->sanitize_text_field($_POST['conversion_direction']) : 'php_to_json';
+            
+            if (empty($field_group_keys) || !is_array($field_group_keys)) {
+                wp_send_json_error($this->error_handler->handle_error(
+                    'invalid_input',
+                    __('No field groups selected for conversion.', 'acf-php-json-converter'),
+                    array('field_group_keys' => $field_group_keys)
+                ));
+                return;
+            }
+
+            // Sanitize field group keys
+            $field_group_keys = array_map(array($this->security, 'sanitize_text_field'), $field_group_keys);
+
+            $this->logger->info('Starting batch conversion with progress tracking', array(
+                'field_group_count' => count($field_group_keys),
+                'conversion_direction' => $conversion_direction
+            ));
+
+            // Create batch processor function
+            $processor = function($field_group_key, $index, $options) use ($conversion_direction) {
+                try {
+                    // Check for cancellation
+                    $cancellation_key = 'acf_php_json_cancel_' . $options['operation_id'];
+                    if (get_transient($cancellation_key)) {
+                        return array(
+                            'success' => false,
+                            'message' => __('Operation cancelled by user.', 'acf-php-json-converter'),
+                            'cancelled' => true
+                        );
+                    }
+
+                    if ($conversion_direction === 'php_to_json') {
+                        return $this->process_single_php_to_json_conversion($field_group_key);
+                    } else {
+                        return $this->process_single_json_to_php_conversion($field_group_key);
+                    }
+
+                } catch (Exception $e) {
+                    return array(
+                        'success' => false,
+                        'message' => sprintf(__('Error converting %s: %s', 'acf-php-json-converter'), $field_group_key, $e->getMessage())
+                    );
+                }
+            };
+
+            // Generate unique operation ID
+            $operation_id = uniqid('batch_convert_' . time() . '_');
+
+            // Use error handler's batch operation method
+            $batch_options = array('operation_id' => $operation_id);
+            $results = $this->error_handler->handle_batch_operation(
+                __('Batch Field Group Conversion', 'acf-php-json-converter'),
+                $field_group_keys,
+                $processor,
+                $batch_options
+            );
+
+            // Return operation ID for progress tracking
+            wp_send_json_success(array(
+                'operation_id' => $operation_id,
+                'message' => sprintf(
+                    __('Batch conversion started. Processing %d field groups...', 'acf-php-json-converter'),
+                    count($field_group_keys)
+                ),
+                'total_items' => count($field_group_keys)
+            ));
+
+        } catch (Exception $e) {
+            wp_send_json_error($this->error_handler->handle_error(
+                'batch_conversion_failed',
+                __('Failed to start batch conversion.', 'acf-php-json-converter'),
+                array('exception' => $e->getMessage()),
+                'error'
+            ));
+        }
+    }
+
+    /**
+     * Process single PHP to JSON conversion.
+     *
+     * @since    1.0.0
+     * @param    string    $field_group_key    Field group key.
+     * @return   array     Conversion result.
+     */
+    protected function process_single_php_to_json_conversion($field_group_key) {
+        // Get cached scan results to find the field group
+        $scan_results = $this->scanner->get_cached_results();
+        
+        if (!$scan_results || empty($scan_results['field_groups'])) {
+            return $this->error_handler->handle_error(
+                'scan_results_missing',
+                __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                array('field_group_key' => $field_group_key)
+            );
+        }
+        
+        // Find the specific field group
+        $field_group = null;
+        foreach ($scan_results['field_groups'] as $group) {
+            if ($group['key'] === $field_group_key) {
+                $field_group = $group;
+                break;
+            }
+        }
+        
+        if (!$field_group) {
+            return $this->error_handler->handle_error(
+                'field_group_not_found',
+                __('Field group not found in scan results.', 'acf-php-json-converter'),
+                array('field_group_key' => $field_group_key)
+            );
+        }
+        
+        // Convert to JSON format using converter service
+        $conversion_result = $this->converter->convert_php_to_json($field_group);
+        
+        if (!$conversion_result['success']) {
+            return $this->error_handler->handle_error(
+                'conversion_failed',
+                __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
+                array(
+                    'field_group_key' => $field_group_key,
+                    'conversion_errors' => $conversion_result['errors']
+                )
+            );
+        }
+        
+        // Create backup before saving
+        $backup_files = array();
+        $acf_json_dir = $this->file_manager->get_acf_json_directory();
+        if (!empty($acf_json_dir)) {
+            $existing_file = trailingslashit($acf_json_dir) . $field_group['key'] . '.json';
+            if (file_exists($existing_file)) {
+                $backup_files[] = $existing_file;
+            }
+        }
+        
+        if (!empty($backup_files)) {
+            $backup_path = $this->file_manager->create_backup($backup_files);
+            if (empty($backup_path)) {
+                $this->logger->warning('Failed to create backup before conversion', array('field_group_key' => $field_group_key));
+            }
+        }
+        
+        // Write JSON file to acf-json directory
+        $filename = $field_group['key'] . '.json';
+        $write_result = $this->file_manager->write_json_file($filename, $conversion_result['data']);
+        
+        if (!$write_result) {
+            return $this->error_handler->handle_error(
+                'file_write_failed',
+                __('Failed to write JSON file to acf-json directory.', 'acf-php-json-converter'),
+                array(
+                    'field_group_key' => $field_group_key,
+                    'filename' => $filename
+                )
+            );
+        }
+        
+        return $this->error_handler->handle_success(
+            sprintf(__('Field group "%s" converted successfully!', 'acf-php-json-converter'), $field_group['title']),
+            array(
+                'field_group_key' => $field_group['key'],
+                'field_group_title' => $field_group['title'],
+                'filename' => $filename
+            )
+        );
+    }
+
+    /**
+     * Process single JSON to PHP conversion.
+     *
+     * @since    1.0.0
+     * @param    string    $json_data    JSON data to convert.
+     * @return   array     Conversion result.
+     */
+    protected function process_single_json_to_php_conversion($json_data) {
+        // This is a placeholder for JSON to PHP conversion in batch mode
+        // Implementation would depend on how JSON data is provided in batch mode
+        return $this->error_handler->handle_error(
+            'not_implemented',
+            __('JSON to PHP batch conversion is not yet implemented.', 'acf-php-json-converter'),
+            array('json_data' => $json_data)
+        );
+    }
+
+    /**
+     * Get plugin settings with defaults.
+     *
+     * @since    1.0.0
+     * @return   array    Plugin settings.
+     */
+    public function get_plugin_settings() {
+        $default_settings = $this->get_default_settings();
+        $saved_settings = get_option('acf_php_json_converter_settings', array());
+
+        return wp_parse_args($saved_settings, $default_settings);
+    }
+
+    /**
+     * Get default plugin settings.
+     *
+     * @since    1.0.0
+     * @return   array    Default settings.
+     */
+    protected function get_default_settings() {
+        return array(
+            'auto_create_json_folder' => true,
+            'default_export_location' => 'theme',
+            'logging_level' => 'warning',
+            'log_retention_days' => 30,
+            'enable_debug_mode' => false,
+            'error_display_mode' => 'log_only',
+            'max_error_notices' => 3,
+            'enable_error_recovery' => true,
+            'log_user_actions' => false
+        );
+    }
+
+    /**
+     * Validate settings data.
+     *
+     * @since    1.0.0
+     * @param    array    $settings    Settings to validate.
+     * @return   array    Validation errors.
+     */
+    protected function validate_settings($settings) {
+        $errors = array();
+
+        // Validate default export location
+        $valid_locations = array('theme', 'download');
+        if (!in_array($settings['default_export_location'], $valid_locations)) {
+            $errors[] = __('Invalid default export location.', 'acf-php-json-converter');
+        }
+
+        // Validate logging level
+        $valid_levels = array('error', 'warning', 'info', 'debug');
+        if (!in_array($settings['logging_level'], $valid_levels)) {
+            $errors[] = __('Invalid logging level.', 'acf-php-json-converter');
+        }
+
+        // Validate log retention days
+        if ($settings['log_retention_days'] < 1 || $settings['log_retention_days'] > 365) {
+            $errors[] = __('Log retention days must be between 1 and 365.', 'acf-php-json-converter');
+        }
+
+        // Validate error display mode
+        $valid_display_modes = array('admin_notice', 'log_only', 'both');
+        if (!in_array($settings['error_display_mode'], $valid_display_modes)) {
+            $errors[] = __('Invalid error display mode.', 'acf-php-json-converter');
+        }
+
+        // Validate max error notices
+        if ($settings['max_error_notices'] < 1 || $settings['max_error_notices'] > 10) {
+            $errors[] = __('Max error notices must be between 1 and 10.', 'acf-php-json-converter');
+        }
+
+        return $errors;
     }
 
     /**

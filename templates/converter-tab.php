@@ -73,6 +73,9 @@
             </div>
         </div>
         
+        <!-- Enhanced Progress Container -->
+        <div id="batch-progress-container"></div>
+        
         <!-- Batch Progress -->
         <div id="batch-progress" class="batch-progress" style="display: none;">
             <div class="progress-header">

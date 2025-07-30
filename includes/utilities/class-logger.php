@@ -598,6 +598,41 @@ class Logger {
         
         return update_option('acf_php_json_converter_settings', $settings);
     }
+
+    /**
+     * Set log level (alias for set_current_level).
+     *
+     * @since    1.0.0
+     * @param    string    $level    Log level.
+     * @return   bool      True on success, false on failure.
+     */
+    public function set_log_level($level) {
+        return $this->set_current_level($level);
+    }
+
+    /**
+     * Get recent logs from database.
+     *
+     * @since    1.0.0
+     * @param    int       $limit    Number of logs to retrieve.
+     * @return   array     Recent logs.
+     */
+    public function get_recent_logs($limit = 100) {
+        return $this->get_logs('', $limit);
+    }
+
+    /**
+     * Clear all logs (both database and files).
+     *
+     * @since    1.0.0
+     * @return   bool      True on success, false on failure.
+     */
+    public function clear_log() {
+        $db_result = $this->clear_logs();
+        $file_result = $this->clear_log_files();
+        
+        return ($db_result && $file_result);
+    }
     /**
      * Initialize error statistics.
      *

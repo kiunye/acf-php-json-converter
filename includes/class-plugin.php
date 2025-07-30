@@ -65,6 +65,8 @@ class Plugin {
         // Load utility classes
         require_once ACF_PHP_JSON_CONVERTER_DIR . 'includes/utilities/class-logger.php';
         require_once ACF_PHP_JSON_CONVERTER_DIR . 'includes/utilities/class-security.php';
+        require_once ACF_PHP_JSON_CONVERTER_DIR . 'includes/utilities/class-error-handler.php';
+        require_once ACF_PHP_JSON_CONVERTER_DIR . 'includes/utilities/class-progress-tracker.php';
         
         // Load admin classes
         require_once ACF_PHP_JSON_CONVERTER_DIR . 'includes/admin/class-admin-controller.php';
@@ -125,9 +127,19 @@ class Plugin {
         $this->loader->add_action('wp_ajax_acf_php_json_convert_php_to_json', $this->services['admin'], 'ajax_convert_php_to_json');
         $this->loader->add_action('wp_ajax_acf_php_json_convert_json_to_php', $this->services['admin'], 'ajax_convert_json_to_php');
         $this->loader->add_action('wp_ajax_acf_php_json_save_settings', $this->services['admin'], 'ajax_save_settings');
+        $this->loader->add_action('wp_ajax_acf_php_json_load_settings', $this->services['admin'], 'ajax_load_settings');
+        $this->loader->add_action('wp_ajax_acf_php_json_clear_log', $this->services['admin'], 'ajax_clear_log');
+        $this->loader->add_action('wp_ajax_acf_php_json_get_error_log', $this->services['admin'], 'ajax_get_error_log');
+        $this->loader->add_action('wp_ajax_acf_php_json_reset_settings', $this->services['admin'], 'ajax_reset_settings');
+        $this->loader->add_action('wp_ajax_acf_php_json_cleanup_logs', $this->services['admin'], 'ajax_cleanup_logs');
         $this->loader->add_action('wp_ajax_acf_php_json_preview_field_group', $this->services['admin'], 'ajax_preview_field_group');
         $this->loader->add_action('wp_ajax_acf_php_json_download_field_group', $this->services['admin'], 'ajax_download_field_group');
         $this->loader->add_action('wp_ajax_acf_php_json_batch_process', $this->services['admin'], 'ajax_batch_process');
+        
+        // Enhanced error handling and progress tracking AJAX handlers
+        $this->loader->add_action('wp_ajax_acf_php_json_get_progress', $this->services['admin'], 'ajax_get_progress');
+        $this->loader->add_action('wp_ajax_acf_php_json_cancel_operation', $this->services['admin'], 'ajax_cancel_operation');
+        $this->loader->add_action('wp_ajax_acf_php_json_batch_convert_with_progress', $this->services['admin'], 'ajax_batch_convert_with_progress');
     }
 
     /**
