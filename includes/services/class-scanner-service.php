@@ -209,8 +209,19 @@ class Scanner_Service {
             return array($theme_path);
         }
         
-        // Get current theme paths
-        return $this->file_manager->get_theme_paths();
+        // Get current theme paths from file manager
+        $theme_paths_data = $this->file_manager->get_theme_paths();
+        
+        // Convert associative array to simple array of paths
+        $theme_paths = array();
+        if (isset($theme_paths_data['current'])) {
+            $theme_paths[] = $theme_paths_data['current'];
+        }
+        if (isset($theme_paths_data['parent'])) {
+            $theme_paths[] = $theme_paths_data['parent'];
+        }
+        
+        return $theme_paths;
     }
 
     /**
@@ -230,7 +241,14 @@ class Scanner_Service {
                 continue;
             }
             
-            // Create recursive directory iterator
+            // First, explicitly check for functions.php in the theme root
+            $functions_php = trailingslashit($theme_path) . 'functions.php';
+            if (file_exists($functions_php) && $this->security->validate_path($functions_php)) {
+                $php_files[] = $functions_php;
+                $this->logger->info('Found functions.php', array('path' => $functions_php));
+            }
+            
+            // Create recursive directory iterator for other PHP files
             try {
                 $directory_iterator = new \RecursiveDirectoryIterator($theme_path);
                 $iterator = new \RecursiveIteratorIterator($directory_iterator);
@@ -238,6 +256,11 @@ class Scanner_Service {
                 
                 foreach ($regex_iterator as $file) {
                     $file_path = $file[0];
+                    
+                    // Skip functions.php as we already added it explicitly
+                    if (basename($file_path) === 'functions.php' && dirname($file_path) === rtrim($theme_path, '/')) {
+                        continue;
+                    }
                     
                     // Skip disallowed directories
                     if ($this->is_in_disallowed_dir($file_path)) {
@@ -285,16 +308,25 @@ class Scanner_Service {
         $field_groups = array();
         $files_processed = 0;
         $total_files = count($php_files);
+        $functions_php_found = false;
         
         foreach ($php_files as $file_path) {
             $files_processed++;
+            
+            // Check if this is functions.php
+            $is_functions_php = basename($file_path) === 'functions.php';
+            if ($is_functions_php) {
+                $functions_php_found = true;
+                $this->logger->info('Processing functions.php', array('path' => $file_path));
+            }
             
             // Log progress every 50 files
             if ($files_processed % 50 === 0 || $files_processed === $total_files) {
                 $this->logger->debug('Scanning progress', array(
                     'processed' => $files_processed,
                     'total' => $total_files,
-                    'percentage' => round(($files_processed / $total_files) * 100)
+                    'percentage' => round(($files_processed / $total_files) * 100),
+                    'current_file' => basename($file_path)
                 ));
             }
             
@@ -302,11 +334,43 @@ class Scanner_Service {
             $file_field_groups = $this->php_parser->parse_file($file_path);
             
             if (!empty($file_field_groups)) {
+                $count_before = count($field_groups);
+                
                 foreach ($file_field_groups as $field_group) {
                     // Add to field groups array, keyed by field group key
                     $field_groups[$field_group['key']] = $field_group;
                 }
+                
+                $new_groups_count = count($field_groups) - $count_before;
+                
+                if ($is_functions_php && $new_groups_count > 0) {
+                    $this->logger->info('Found field groups in functions.php', array(
+                        'count' => $new_groups_count,
+                        'file' => $file_path
+                    ));
+                }
             }
+        }
+        
+        // Log functions.php scanning result
+        if ($functions_php_found) {
+            $functions_php_groups = array_filter($field_groups, function($group) {
+                return isset($group['_acf_php_json_converter']['source_type']) && 
+                       $group['_acf_php_json_converter']['source_type'] === 'functions_php';
+            });
+            
+            $this->logger->info('Functions.php scanning completed', array(
+                'field_groups_found' => count($functions_php_groups)
+            ));
+            
+            if (count($functions_php_groups) > 0) {
+                $this->add_warning(sprintf(
+                    'Found %d field group(s) in functions.php. These may need special handling during conversion.',
+                    count($functions_php_groups)
+                ));
+            }
+        } else {
+            $this->add_warning('No functions.php file found in theme directories.');
         }
         
         return $field_groups;
@@ -453,5 +517,113 @@ class Scanner_Service {
      */
     public function get_cache_expiration() {
         return $this->cache_expiration;
+    }
+
+    /**
+     * Get functions.php specific field groups from scan results.
+     *
+     * @since    1.0.0
+     * @param    array    $scan_results    Optional. Scan results. If not provided, uses cached results.
+     * @return   array    Functions.php field groups.
+     */
+    public function get_functions_php_field_groups($scan_results = null) {
+        if ($scan_results === null) {
+            $scan_results = $this->get_cached_results();
+        }
+        
+        if (!$scan_results || !isset($scan_results['field_groups'])) {
+            return array();
+        }
+        
+        $functions_php_groups = array();
+        
+        foreach ($scan_results['field_groups'] as $field_group) {
+            if (isset($field_group['_acf_php_json_converter']['source_type']) && 
+                $field_group['_acf_php_json_converter']['source_type'] === 'functions_php') {
+                $functions_php_groups[] = $field_group;
+            }
+        }
+        
+        return $functions_php_groups;
+    }
+
+    /**
+     * Check if functions.php was scanned in the last scan.
+     *
+     * @since    1.0.0
+     * @return   bool    True if functions.php was found and scanned.
+     */
+    public function was_functions_php_scanned() {
+        $cached_results = $this->get_cached_results();
+        
+        if (!$cached_results || !isset($cached_results['field_groups'])) {
+            return false;
+        }
+        
+        foreach ($cached_results['field_groups'] as $field_group) {
+            if (isset($field_group['_acf_php_json_converter']['source_file']) && 
+                basename($field_group['_acf_php_json_converter']['source_file']) === 'functions.php') {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Get scan statistics including functions.php information.
+     *
+     * @since    1.0.0
+     * @param    array    $scan_results    Optional. Scan results. If not provided, uses cached results.
+     * @return   array    Scan statistics.
+     */
+    public function get_scan_statistics($scan_results = null) {
+        if ($scan_results === null) {
+            $scan_results = $this->get_cached_results();
+        }
+        
+        if (!$scan_results || !isset($scan_results['field_groups'])) {
+            return array(
+                'total_field_groups' => 0,
+                'functions_php_groups' => 0,
+                'theme_file_groups' => 0,
+                'functions_php_scanned' => false
+            );
+        }
+        
+        $stats = array(
+            'total_field_groups' => count($scan_results['field_groups']),
+            'functions_php_groups' => 0,
+            'theme_file_groups' => 0,
+            'functions_php_scanned' => false,
+            'source_files' => array()
+        );
+        
+        foreach ($scan_results['field_groups'] as $field_group) {
+            if (isset($field_group['_acf_php_json_converter']['source_file'])) {
+                $source_file = $field_group['_acf_php_json_converter']['source_file'];
+                $source_type = isset($field_group['_acf_php_json_converter']['source_type']) ? 
+                              $field_group['_acf_php_json_converter']['source_type'] : 'theme_file';
+                
+                if (!isset($stats['source_files'][$source_file])) {
+                    $stats['source_files'][$source_file] = array(
+                        'count' => 0,
+                        'type' => $source_type,
+                        'basename' => basename($source_file)
+                    );
+                }
+                
+                $stats['source_files'][$source_file]['count']++;
+                
+                if ($source_type === 'functions_php') {
+                    $stats['functions_php_groups']++;
+                    $stats['functions_php_scanned'] = true;
+                } else {
+                    $stats['theme_file_groups']++;
+                }
+            }
+        }
+        
+        return $stats;
     }
 }

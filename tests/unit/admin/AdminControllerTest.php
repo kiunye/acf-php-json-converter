@@ -15,6 +15,7 @@ use ACF_PHP_JSON_Converter\Services\Converter_Service;
 use ACF_PHP_JSON_Converter\Services\File_Manager;
 use ACF_PHP_JSON_Converter\Utilities\Logger;
 use ACF_PHP_JSON_Converter\Utilities\Security;
+use ACF_PHP_JSON_Converter\Utilities\Error_Handler;
 
 /**
  * Test Admin Controller functionality.
@@ -64,6 +65,13 @@ class AdminControllerTest extends TestCase {
     private $mock_security;
 
     /**
+     * Mock Error Handler.
+     *
+     * @var MockObject|Error_Handler
+     */
+    private $mock_error_handler;
+
+    /**
      * Set up test fixtures.
      */
     protected function setUp(): void {
@@ -75,6 +83,7 @@ class AdminControllerTest extends TestCase {
         $this->mock_file_manager = $this->createMock(File_Manager::class);
         $this->mock_logger = $this->createMock(Logger::class);
         $this->mock_security = $this->createMock(Security::class);
+        $this->mock_error_handler = $this->createMock(Error_Handler::class);
 
         // Create admin controller instance
         $this->admin_controller = new Admin_Controller(
@@ -82,7 +91,8 @@ class AdminControllerTest extends TestCase {
             $this->mock_converter,
             $this->mock_file_manager,
             $this->mock_logger,
-            $this->mock_security
+            $this->mock_security,
+            $this->mock_error_handler
         );
     }
 

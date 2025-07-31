@@ -224,7 +224,7 @@ class File_Manager {
             return '';
         }
 
-        return $acf_json_path;
+        return rtrim($acf_json_path, '/');
     }
     
     /**
@@ -370,19 +370,29 @@ class File_Manager {
      *
      * @since    1.0.0
      * @param    array     $field_groups    Field groups to export.
-     * @return   string    Download URL or empty string on failure.
+     * @param    string    $format          Export format ('json' or 'zip').
+     * @param    array     $options         Export options.
+     * @return   array     Export result with download URL and metadata.
      */
-    public function export_files($field_groups) {
+    public function export_files($field_groups, $format = 'auto', $options = []) {
         // Initialize WordPress filesystem
         if (!$this->initialize_filesystem()) {
             $this->logger->error('Failed to initialize filesystem');
-            return '';
+            return [
+                'success' => false,
+                'message' => 'Failed to initialize filesystem',
+                'download_url' => '',
+            ];
         }
 
         // Validate field groups
         if (!is_array($field_groups) || empty($field_groups)) {
             $this->logger->error('No field groups provided for export');
-            return '';
+            return [
+                'success' => false,
+                'message' => 'No field groups provided for export',
+                'download_url' => '',
+            ];
         }
 
         // Create temporary directory for export
@@ -391,7 +401,11 @@ class File_Manager {
         
         if (!$this->wp_filesystem->mkdir($temp_dir)) {
             $this->logger->error('Failed to create temporary export directory');
-            return '';
+            return [
+                'success' => false,
+                'message' => 'Failed to create temporary export directory',
+                'download_url' => '',
+            ];
         }
 
         // Set proper permissions
@@ -399,10 +413,15 @@ class File_Manager {
 
         // Write field groups to JSON files
         $exported_files = [];
+        $failed_exports = [];
         
         foreach ($field_groups as $field_group) {
             // Skip invalid field groups
             if (!is_array($field_group) || !isset($field_group['key'])) {
+                $failed_exports[] = [
+                    'key' => 'unknown',
+                    'error' => 'Invalid field group structure',
+                ];
                 continue;
             }
             
@@ -410,49 +429,240 @@ class File_Manager {
             $filename = $field_group['key'] . '.json';
             $file_path = trailingslashit($temp_dir) . $filename;
             
+            // Clean field group data for export
+            $export_data = $this->prepare_field_group_for_export($field_group);
+            
             // Convert to JSON
-            $json_data = wp_json_encode($field_group, JSON_PRETTY_PRINT);
+            $json_data = wp_json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $this->logger->error('Failed to encode field group to JSON: ' . json_last_error_msg(), [
                     'field_group_key' => $field_group['key'],
                 ]);
+                $failed_exports[] = [
+                    'key' => $field_group['key'],
+                    'error' => 'JSON encoding failed: ' . json_last_error_msg(),
+                ];
                 continue;
             }
             
             // Write file
             if ($this->wp_filesystem->put_contents($file_path, $json_data)) {
                 $this->wp_filesystem->chmod($file_path, FS_CHMOD_FILE);
-                $exported_files[] = $file_path;
+                $exported_files[] = [
+                    'path' => $file_path,
+                    'key' => $field_group['key'],
+                    'title' => isset($field_group['title']) ? $field_group['title'] : $field_group['key'],
+                    'size' => strlen($json_data),
+                ];
             } else {
                 $this->logger->error('Failed to write export file: ' . $file_path);
+                $failed_exports[] = [
+                    'key' => $field_group['key'],
+                    'error' => 'Failed to write file',
+                ];
             }
         }
 
         // If no files were exported, clean up and return
         if (empty($exported_files)) {
             $this->wp_filesystem->rmdir($temp_dir, true);
-            return '';
+            return [
+                'success' => false,
+                'message' => 'No field groups could be exported',
+                'download_url' => '',
+                'failed_exports' => $failed_exports,
+            ];
         }
 
-        // Create ZIP archive if multiple field groups
-        if (count($exported_files) > 1) {
-            $zip_file = trailingslashit($upload_dir['basedir']) . 'acf-field-groups-' . date('Y-m-d') . '.zip';
-            $result = $this->create_zip_archive($exported_files, $zip_file, $temp_dir);
+        // Determine export format
+        if ($format === 'auto') {
+            $format = count($exported_files) > 1 ? 'zip' : 'json';
+        }
+
+        $result = [];
+
+        if ($format === 'zip' || count($exported_files) > 1) {
+            // Create ZIP archive
+            $timestamp = date('Y-m-d-H-i-s');
+            $zip_filename = 'acf-field-groups-' . $timestamp . '.zip';
+            $zip_file = trailingslashit($upload_dir['basedir']) . $zip_filename;
+            
+            $zip_result = $this->create_zip_archive(
+                array_column($exported_files, 'path'),
+                $zip_file,
+                $temp_dir
+            );
+            
+            if ($zip_result) {
+                $result = [
+                    'success' => true,
+                    'message' => sprintf(
+                        'Successfully exported %d field groups to ZIP archive',
+                        count($exported_files)
+                    ),
+                    'download_url' => $upload_dir['baseurl'] . '/' . $zip_filename,
+                    'filename' => $zip_filename,
+                    'format' => 'zip',
+                    'file_count' => count($exported_files),
+                    'total_size' => filesize($zip_file),
+                    'exported_files' => $exported_files,
+                ];
+            } else {
+                $result = [
+                    'success' => false,
+                    'message' => 'Failed to create ZIP archive',
+                    'download_url' => '',
+                ];
+            }
             
             // Clean up temporary directory
             $this->wp_filesystem->rmdir($temp_dir, true);
             
-            if ($result) {
-                return $upload_dir['baseurl'] . '/' . basename($zip_file);
-            } else {
-                return '';
-            }
         } else {
             // Single file export
-            $file_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $exported_files[0]);
-            return $file_url;
+            $exported_file = $exported_files[0];
+            $final_filename = $exported_file['key'] . '.json';
+            $final_path = trailingslashit($upload_dir['basedir']) . $final_filename;
+            
+            // Move file to final location
+            if ($this->wp_filesystem->move($exported_file['path'], $final_path)) {
+                $result = [
+                    'success' => true,
+                    'message' => 'Successfully exported field group',
+                    'download_url' => $upload_dir['baseurl'] . '/' . $final_filename,
+                    'filename' => $final_filename,
+                    'format' => 'json',
+                    'file_count' => 1,
+                    'total_size' => $exported_file['size'],
+                    'exported_files' => [$exported_file],
+                ];
+            } else {
+                $result = [
+                    'success' => false,
+                    'message' => 'Failed to move exported file',
+                    'download_url' => '',
+                ];
+            }
+            
+            // Clean up temporary directory
+            $this->wp_filesystem->rmdir($temp_dir, true);
         }
+
+        // Add failed exports to result
+        if (!empty($failed_exports)) {
+            $result['failed_exports'] = $failed_exports;
+            $result['partial_success'] = true;
+        }
+
+        // Log export result
+        if ($result['success']) {
+            $this->logger->info('Field groups exported successfully', [
+                'format' => $result['format'],
+                'file_count' => $result['file_count'],
+                'filename' => $result['filename'],
+            ]);
+        } else {
+            $this->logger->error('Field group export failed', [
+                'message' => $result['message'],
+                'failed_count' => count($failed_exports),
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Prepare field group data for export by cleaning internal metadata.
+     *
+     * @since    1.0.0
+     * @param    array    $field_group    Field group data.
+     * @return   array    Cleaned field group data.
+     */
+    protected function prepare_field_group_for_export($field_group) {
+        // Remove internal metadata added by the plugin
+        $clean_data = $field_group;
+        
+        // Remove plugin-specific metadata
+        unset($clean_data['_acf_php_json_converter']);
+        
+        // Ensure required ACF fields are present
+        if (!isset($clean_data['key']) || empty($clean_data['key'])) {
+            $clean_data['key'] = 'group_' . uniqid();
+        }
+        
+        if (!isset($clean_data['title']) || empty($clean_data['title'])) {
+            $clean_data['title'] = 'Field Group';
+        }
+        
+        if (!isset($clean_data['fields'])) {
+            $clean_data['fields'] = [];
+        }
+        
+        // Set default values for optional fields
+        $defaults = [
+            'location' => [],
+            'menu_order' => 0,
+            'position' => 'normal',
+            'style' => 'default',
+            'label_placement' => 'top',
+            'instruction_placement' => 'label',
+            'hide_on_screen' => '',
+            'active' => true,
+            'description' => '',
+        ];
+        
+        foreach ($defaults as $key => $default_value) {
+            if (!isset($clean_data[$key])) {
+                $clean_data[$key] = $default_value;
+            }
+        }
+        
+        return $clean_data;
+    }
+
+    /**
+     * Export single field group as JSON string.
+     *
+     * @since    1.0.0
+     * @param    array    $field_group    Field group data.
+     * @return   array    Export result with JSON string.
+     */
+    public function export_field_group_as_json($field_group) {
+        if (!is_array($field_group) || !isset($field_group['key'])) {
+            return [
+                'success' => false,
+                'message' => 'Invalid field group data',
+                'json' => '',
+            ];
+        }
+        
+        // Clean field group data for export
+        $export_data = $this->prepare_field_group_for_export($field_group);
+        
+        // Convert to JSON
+        $json_data = wp_json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->error('Failed to encode field group to JSON: ' . json_last_error_msg(), [
+                'field_group_key' => $field_group['key'],
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'JSON encoding failed: ' . json_last_error_msg(),
+                'json' => '',
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'message' => 'Field group exported as JSON',
+            'json' => $json_data,
+            'key' => $field_group['key'],
+            'title' => isset($field_group['title']) ? $field_group['title'] : $field_group['key'],
+            'size' => strlen($json_data),
+        ];
     }
 
     /**
@@ -567,15 +777,15 @@ class File_Manager {
      */
     public function create_zip_archive($files, $zip_file, $base_dir = '') {
         // Check if ZIP extension is available
-        if (!class_exists('ZipArchive')) {
+        if (!class_exists('\ZipArchive')) {
             $this->logger->error('ZIP extension not available');
             return false;
         }
 
         // Create ZIP archive
-        $zip = new ZipArchive();
+        $zip = new \ZipArchive();
         
-        if ($zip->open($zip_file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        if ($zip->open($zip_file, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
             $this->logger->error('Failed to create ZIP file: ' . $zip_file);
             return false;
         }
@@ -602,8 +812,13 @@ class File_Manager {
         if ($result) {
             $this->logger->info('Created ZIP archive: ' . $zip_file);
             
-            // Set proper permissions
-            $this->wp_filesystem->chmod($zip_file, FS_CHMOD_FILE);
+            // Set proper permissions if filesystem is available
+            if ($this->wp_filesystem && method_exists($this->wp_filesystem, 'chmod')) {
+                $this->wp_filesystem->chmod($zip_file, FS_CHMOD_FILE);
+            } else {
+                // Fallback to PHP chmod
+                @chmod($zip_file, FS_CHMOD_FILE);
+            }
         } else {
             $this->logger->error('Failed to close ZIP file: ' . $zip_file);
         }

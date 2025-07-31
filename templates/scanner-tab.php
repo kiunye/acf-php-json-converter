@@ -1,6 +1,6 @@
 <div class="scanner-tab-content">
     <h2><?php _e('Theme File Scanner', 'acf-php-json-converter'); ?></h2>
-    <p><?php _e('Scan your theme files for ACF field groups defined in PHP using acf_add_local_field_group().', 'acf-php-json-converter'); ?></p>
+    <p><?php _e('Scan your theme files for ACF field groups defined in PHP. This includes field groups in functions.php, theme template files, and includes using acf_add_local_field_group(), acf_register_field_group(), or register_field_group().', 'acf-php-json-converter'); ?></p>
     
     <div class="scanner-controls">
         <button type="button" id="scan-theme-btn" class="button button-primary">
@@ -30,6 +30,10 @@
                 <span class="stat-label"><?php _e('Field Groups Found', 'acf-php-json-converter'); ?></span>
             </div>
             <div class="stat-item">
+                <span class="stat-number" id="functions-php-count">0</span>
+                <span class="stat-label"><?php _e('From functions.php', 'acf-php-json-converter'); ?></span>
+            </div>
+            <div class="stat-item">
                 <span class="stat-number" id="execution-time">0</span>
                 <span class="stat-label"><?php _e('Execution Time (s)', 'acf-php-json-converter'); ?></span>
             </div>
@@ -40,6 +44,12 @@
         </div>
         <div class="scan-timestamp">
             <?php _e('Last scan:', 'acf-php-json-converter'); ?> <span id="scan-timestamp"></span>
+        </div>
+        <div id="functions-php-info" class="functions-php-info" style="display: none;">
+            <div class="info-notice">
+                <span class="dashicons dashicons-info"></span>
+                <span class="info-text"><?php _e('Field groups found in functions.php may require special handling during conversion.', 'acf-php-json-converter'); ?></span>
+            </div>
         </div>
     </div>
     

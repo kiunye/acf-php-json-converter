@@ -593,7 +593,28 @@
                 return;
             }
 
-            startBatchConversionWithProgress(selectedGroups);
+            startBatchConversion(selectedGroups);
+        });
+
+        // Export selected button handler
+        $('#export-selected-btn').on('click', function () {
+            var selectedGroups = [];
+            $('.field-group-checkbox:checked').each(function () {
+                selectedGroups.push($(this).val());
+            });
+
+            if (selectedGroups.length === 0) {
+                showNotice('Please select at least one field group to export.', 'warning', { autoDismiss: 5000 });
+                return;
+            }
+
+            exportSelectedFieldGroups(selectedGroups);
+        });
+
+        // Copy JSON handlers
+        $(document).on('click', '.copy-json-btn', function () {
+            var fieldGroupKey = $(this).data('key');
+            copyFieldGroupJson(fieldGroupKey);
         });
 
         // Cancel batch button handler
@@ -1348,6 +1369,24 @@
         $('#execution-time').text(data.execution_time || 0);
         $('#warnings-count').text((data.warnings && data.warnings.length) || 0);
         $('#scan-timestamp').text(data.timestamp || 'Unknown');
+        
+        // Count functions.php field groups
+        var functionsPhpCount = 0;
+        if (data.field_groups && data.field_groups.length > 0) {
+            functionsPhpCount = data.field_groups.filter(function(group) {
+                return group._acf_php_json_converter && 
+                       group._acf_php_json_converter.source_type === 'functions_php';
+            }).length;
+        }
+        
+        $('#functions-php-count').text(functionsPhpCount);
+        
+        // Show functions.php info if any groups found
+        if (functionsPhpCount > 0) {
+            $('#functions-php-info').show();
+        } else {
+            $('#functions-php-info').hide();
+        }
 
         $summary.show();
         $tbody.empty();
@@ -1370,12 +1409,18 @@
                 // Key column
                 row.append('<td class="column-key"><code>' + escapeHtml(group.key) + '</code></td>');
 
-                // Source file column
-                row.append('<td class="column-source">' +
-                    '<span title="' + escapeHtml(group.source_file_full || group.source_file) + '">' +
-                    escapeHtml(group.source_file) +
-                    '</span>' +
-                    '</td>');
+                // Source file column with special handling for functions.php
+                var sourceFileHtml = '<span title="' + escapeHtml(group.source_file_full || group.source_file) + '">' +
+                    escapeHtml(group.source_file);
+                
+                // Add special indicator for functions.php
+                if (group._acf_php_json_converter && group._acf_php_json_converter.source_type === 'functions_php') {
+                    sourceFileHtml += ' <span class="functions-php-badge" title="Defined in functions.php">functions.php</span>';
+                }
+                
+                sourceFileHtml += '</span>';
+                
+                row.append('<td class="column-source">' + sourceFileHtml + '</td>');
 
                 // Fields count column
                 row.append('<td class="column-fields">' +
@@ -1390,6 +1435,9 @@
                     '<div class="row-actions">' +
                     '<button class="button button-small preview-field-group" data-key="' + escapeHtml(group.key) + '" title="Preview JSON output">' +
                     '<span class="dashicons dashicons-visibility"></span> Preview' +
+                    '</button> ' +
+                    '<button class="button button-small copy-json-btn" data-key="' + escapeHtml(group.key) + '" title="Copy JSON to clipboard">' +
+                    '<span class="dashicons dashicons-clipboard"></span> Copy' +
                     '</button> ' +
                     '<button class="button button-small download-field-group" data-key="' + escapeHtml(group.key) + '" title="Download JSON file">' +
                     '<span class="dashicons dashicons-download"></span> Download' +
@@ -2272,184 +2320,4 @@
     window.downloadFieldGroup = downloadFieldGroup;
     window.convertFromPreview = convertFromPreview;
 
-})(jQuery);    /**
-
-     * Start batch conversion with progress tracking
-     * 
-     * @param {array} selectedGroups - Array of selected field group keys
-     */
-    function startBatchConversionWithProgress(selectedGroups) {
-        var conversionDirection = $('input[name="conversion_direction"]:checked').val() || 'php_to_json';
-        
-        // Start the batch conversion
-        $.ajax({
-            url: acfPhpJsonConverter.ajaxUrl,
-            type: 'POST',
-            data: {
-                action: 'acf_php_json_batch_convert_with_progress',
-                nonce: acfPhpJsonConverter.nonce,
-                field_group_keys: selectedGroups,
-                conversion_direction: conversionDirection
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Create progress tracker
-                    var progressTracker = createProgressTracker(response.data.operation_id, {
-                        container: '#batch-progress-container',
-                        title: 'Converting Field Groups',
-                        showDetails: true,
-                        showEstimatedTime: true,
-                        onComplete: function(progressData) {
-                            handleBatchConversionComplete(progressData);
-                        },
-                        onError: function(error) {
-                            showNotice('Progress tracking error: ' + error, 'error');
-                        }
-                    });
-                    
-                    progressTracker.start();
-                    
-                    // Show initial success message
-                    showNotice(response.data.message, 'info', { autoDismiss: 3000 });
-                    
-                } else {
-                    // Handle error with enhanced error display
-                    if (response.data && typeof response.data === 'object' && response.data.error_code) {
-                        showNotice(response.data, 'error');
-                    } else {
-                        showNotice(response.data.message || 'Failed to start batch conversion.', 'error');
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                var errorData = {
-                    error_code: 'network_error',
-                    message: 'Network error occurred while starting batch conversion: ' + error,
-                    recovery_options: [
-                        {
-                            label: 'Retry Conversion',
-                            action: 'retry',
-                            description: 'Try the batch conversion again.'
-                        },
-                        {
-                            label: 'Convert Individually',
-                            action: 'individual_conversion',
-                            description: 'Convert field groups one at a time.'
-                        }
-                    ]
-                };
-                showNotice(errorData, 'error');
-            }
-        });
-    }
-
-    /**
-     * Handle batch conversion completion
-     * 
-     * @param {object} progressData - Final progress data
-     */
-    function handleBatchConversionComplete(progressData) {
-        var messageType = 'success';
-        var message = '';
-        
-        if (progressData.status === 'completed') {
-            var successCount = progressData.successful_items || 0;
-            var failedCount = progressData.failed_items || 0;
-            var totalCount = progressData.total_items || 0;
-            
-            if (failedCount === 0) {
-                message = 'All ' + successCount + ' field groups converted successfully!';
-                messageType = 'success';
-            } else if (successCount > 0) {
-                message = successCount + ' of ' + totalCount + ' field groups converted successfully. ' + failedCount + ' failed.';
-                messageType = 'warning';
-            } else {
-                message = 'Batch conversion failed. No field groups were converted successfully.';
-                messageType = 'error';
-            }
-            
-            // Show error recovery suggestions if there were failures
-            if (failedCount > 0 && progressData.errors && progressData.errors.length > 0) {
-                var errorData = {
-                    error_code: 'batch_conversion_partial_failure',
-                    message: message,
-                    recovery_options: [
-                        {
-                            label: 'Retry Failed Items',
-                            action: 'retry_failed',
-                            description: 'Retry conversion for the failed field groups.'
-                        },
-                        {
-                            label: 'Check Error Log',
-                            action: 'check_log',
-                            description: 'Review the error log for detailed failure information.'
-                        },
-                        {
-                            label: 'Convert Individually',
-                            action: 'individual_conversion',
-                            description: 'Try converting failed items one at a time.'
-                        }
-                    ],
-                    support_info: {
-                        failed_count: failedCount,
-                        success_count: successCount,
-                        errors: progressData.errors.slice(0, 5) // Show first 5 errors
-                    }
-                };
-                showNotice(errorData, messageType);
-            } else {
-                showNotice(message, messageType, { autoDismiss: 5000 });
-            }
-            
-        } else if (progressData.status === 'failed') {
-            var errorData = {
-                error_code: 'batch_conversion_failed',
-                message: 'Batch conversion failed completely.',
-                recovery_options: [
-                    {
-                        label: 'Try Again',
-                        action: 'retry',
-                        description: 'Retry the entire batch conversion.'
-                    },
-                    {
-                        label: 'Reduce Batch Size',
-                        action: 'reduce_batch_size',
-                        description: 'Try converting fewer items at once.'
-                    },
-                    {
-                        label: 'Check System Resources',
-                        action: 'check_resources',
-                        description: 'Verify available memory and processing capacity.'
-                    }
-                ]
-            };
-            showNotice(errorData, 'error');
-            
-        } else if (progressData.status === 'cancelled') {
-            showNotice('Batch conversion was cancelled.', 'info', { autoDismiss: 3000 });
-        }
-        
-        // Refresh the field groups list if any conversions were successful
-        if (progressData.successful_items > 0) {
-            setTimeout(function() {
-                refreshFieldGroupsList();
-            }, 2000);
-        }
-    }
-
-    /**
-     * Escape HTML for safe display
-     */
-    function escapeHtml(text) {
-        if (typeof text !== 'string') {
-            return text;
-        }
-        var map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-    }
+})(jQuery);

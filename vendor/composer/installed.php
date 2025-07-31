@@ -3,7 +3,7 @@
         'name' => 'acf-php-json-converter/plugin',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'c889971e4a2cfb142b7daa4c0b1680d6b59d67fd',
+        'reference' => '94075940cf1d93949432ee6f48564c41e0af678e',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'acf-php-json-converter/plugin' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'c889971e4a2cfb142b7daa4c0b1680d6b59d67fd',
+            'reference' => '94075940cf1d93949432ee6f48564c41e0af678e',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

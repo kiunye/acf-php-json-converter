@@ -14,6 +14,7 @@ use ACF_PHP_JSON_Converter\Services\Converter_Service;
 use ACF_PHP_JSON_Converter\Services\File_Manager;
 use ACF_PHP_JSON_Converter\Utilities\Logger;
 use ACF_PHP_JSON_Converter\Utilities\Security;
+use ACF_PHP_JSON_Converter\Utilities\Error_Handler;
 
 /**
  * Admin Controller Class.
@@ -85,13 +86,15 @@ class Admin_Controller {
      * @param    File_Manager        $file_manager  File Manager instance.
      * @param    Logger              $logger        Logger instance.
      * @param    Security            $security      Security instance.
+     * @param    Error_Handler       $error_handler Error Handler instance.
      */
     public function __construct(
         Scanner_Service $scanner,
         Converter_Service $converter,
         File_Manager $file_manager,
         Logger $logger,
-        Security $security
+        Security $security,
+        Error_Handler $error_handler = null
     ) {
         $this->scanner = $scanner;
         $this->converter = $converter;
@@ -99,9 +102,14 @@ class Admin_Controller {
         $this->logger = $logger;
         $this->security = $security;
         
-        // Initialize error handler with current settings
-        $settings = $this->get_plugin_settings();
-        $this->error_handler = new \ACF_PHP_JSON_Converter\Utilities\Error_Handler($this->logger, $settings);
+        // Use provided error handler or create new one
+        if ($error_handler) {
+            $this->error_handler = $error_handler;
+        } else {
+            // Initialize error handler with current settings
+            $settings = $this->get_plugin_settings();
+            $this->error_handler = new Error_Handler($this->logger, $settings);
+        }
     }
 
     /**
@@ -216,7 +224,7 @@ class Admin_Controller {
 
         try {
             // Get theme path from request (optional)
-            $theme_path = isset($_POST['theme_path']) ? $this->security->sanitize_text_field($_POST['theme_path']) : '';
+            $theme_path = isset($_POST['theme_path']) ? $this->security->sanitize_input($_POST['theme_path']) : '';
             
             // Use cache by default, but allow forcing refresh
             $use_cache = !isset($_POST['force_refresh']) || $_POST['force_refresh'] !== 'true';
@@ -318,7 +326,7 @@ class Admin_Controller {
 
         try {
             // Get field group key from request
-            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_text_field($_POST['field_group_key']) : '';
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_input($_POST['field_group_key']) : '';
             
             if (empty($field_group_key)) {
                 wp_send_json_error(array(
@@ -360,7 +368,7 @@ class Admin_Controller {
             // Convert to JSON format using converter service
             $conversion_result = $this->converter->convert_php_to_json($field_group);
             
-            if (!$conversion_result['success']) {
+            if ($conversion_result['status'] === 'error') {
                 wp_send_json_error(array(
                     'message' => __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
                     'errors' => $conversion_result['errors'],
@@ -463,7 +471,7 @@ class Admin_Controller {
             // Convert JSON to PHP using converter service
             $conversion_result = $this->converter->convert_json_to_php($json_data);
             
-            if (!$conversion_result['success']) {
+            if ($conversion_result['status'] === 'error') {
                 wp_send_json_error(array(
                     'message' => __('Failed to convert JSON to PHP.', 'acf-php-json-converter'),
                     'errors' => $conversion_result['errors'],
@@ -503,23 +511,23 @@ class Admin_Controller {
         try {
             // Get settings data from request
             $auto_create_json_folder = isset($_POST['auto_create_json_folder']) ? 
-                $this->security->sanitize_text_field($_POST['auto_create_json_folder']) : '0';
+                $this->security->sanitize_input($_POST['auto_create_json_folder']) : '0';
             $default_export_location = isset($_POST['default_export_location']) ? 
-                $this->security->sanitize_text_field($_POST['default_export_location']) : 'theme';
+                $this->security->sanitize_input($_POST['default_export_location']) : 'theme';
             $logging_level = isset($_POST['logging_level']) ? 
-                $this->security->sanitize_text_field($_POST['logging_level']) : 'warning';
+                $this->security->sanitize_input($_POST['logging_level']) : 'warning';
             $log_retention_days = isset($_POST['log_retention_days']) ? 
                 intval($_POST['log_retention_days']) : 30;
             $enable_debug_mode = isset($_POST['enable_debug_mode']) ? 
-                $this->security->sanitize_text_field($_POST['enable_debug_mode']) : '0';
+                $this->security->sanitize_input($_POST['enable_debug_mode']) : '0';
             $error_display_mode = isset($_POST['error_display_mode']) ? 
-                $this->security->sanitize_text_field($_POST['error_display_mode']) : 'log_only';
+                $this->security->sanitize_input($_POST['error_display_mode']) : 'log_only';
             $max_error_notices = isset($_POST['max_error_notices']) ? 
                 intval($_POST['max_error_notices']) : 3;
             $enable_error_recovery = isset($_POST['enable_error_recovery']) ? 
-                $this->security->sanitize_text_field($_POST['enable_error_recovery']) : '0';
+                $this->security->sanitize_input($_POST['enable_error_recovery']) : '0';
             $log_user_actions = isset($_POST['log_user_actions']) ? 
-                $this->security->sanitize_text_field($_POST['log_user_actions']) : '0';
+                $this->security->sanitize_input($_POST['log_user_actions']) : '0';
 
             // Validate settings
             $validation_errors = $this->validate_settings(array(
@@ -757,7 +765,7 @@ class Admin_Controller {
         }
 
         try {
-            $operation_id = isset($_POST['operation_id']) ? $this->security->sanitize_text_field($_POST['operation_id']) : '';
+            $operation_id = isset($_POST['operation_id']) ? $this->security->sanitize_input($_POST['operation_id']) : '';
             
             if (empty($operation_id)) {
                 wp_send_json_error(array(
@@ -786,6 +794,291 @@ class Admin_Controller {
     }
 
     /**
+     * AJAX handler for batch conversion with progress tracking.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_batch_convert() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group keys from request
+            $field_group_keys = isset($_POST['field_group_keys']) ? $_POST['field_group_keys'] : [];
+            $direction = isset($_POST['direction']) ? $this->security->sanitize_input($_POST['direction']) : 'php_to_json';
+            
+            if (!is_array($field_group_keys) || empty($field_group_keys)) {
+                wp_send_json_error(array(
+                    'message' => __('No field groups selected for conversion.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Sanitize field group keys
+            $field_group_keys = array_map(array($this->security, 'sanitize_input'), $field_group_keys);
+            
+            // Generate operation ID for progress tracking
+            $operation_id = 'batch_convert_' . uniqid();
+            
+            $this->logger->info('Starting batch conversion via AJAX', array(
+                'direction' => $direction,
+                'field_group_count' => count($field_group_keys),
+                'operation_id' => $operation_id,
+            ));
+            
+            // Get field groups from scan results
+            $scan_results = $this->scanner->get_cached_results();
+            
+            if (!$scan_results || empty($scan_results['field_groups'])) {
+                wp_send_json_error(array(
+                    'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Filter field groups by selected keys
+            $field_groups_to_convert = [];
+            foreach ($scan_results['field_groups'] as $field_group) {
+                if (in_array($field_group['key'], $field_group_keys)) {
+                    $field_groups_to_convert[] = $field_group;
+                }
+            }
+            
+            if (empty($field_groups_to_convert)) {
+                wp_send_json_error(array(
+                    'message' => __('Selected field groups not found in scan results.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Perform batch conversion with progress tracking
+            $conversion_result = $this->converter->batch_convert($field_groups_to_convert, $direction, $operation_id);
+            
+            // Create backup if converting to JSON and files will be written
+            if ($direction === 'php_to_json' && $conversion_result['success_count'] > 0) {
+                $backup_files = [];
+                $acf_json_dir = $this->file_manager->get_acf_json_directory();
+                
+                if (!empty($acf_json_dir)) {
+                    foreach ($field_groups_to_convert as $field_group) {
+                        $existing_file = trailingslashit($acf_json_dir) . $field_group['key'] . '.json';
+                        if (file_exists($existing_file)) {
+                            $backup_files[] = $existing_file;
+                        }
+                    }
+                }
+                
+                if (!empty($backup_files)) {
+                    $backup_path = $this->file_manager->create_backup($backup_files);
+                    if (empty($backup_path)) {
+                        $this->logger->warning('Failed to create backup before batch conversion');
+                    }
+                }
+                
+                // Write successful conversions to JSON files
+                foreach ($conversion_result['results'] as $key => $result) {
+                    if ($result['status'] === 'success') {
+                        $filename = $key . '.json';
+                        $write_result = $this->file_manager->write_json_file($filename, $result['data']);
+                        
+                        if (!$write_result) {
+                            $this->logger->error('Failed to write JSON file during batch conversion', [
+                                'field_group_key' => $key,
+                                'filename' => $filename,
+                            ]);
+                        }
+                    }
+                }
+            }
+            
+            wp_send_json_success(array(
+                'message' => $conversion_result['message'],
+                'operation_id' => $operation_id,
+                'status' => $conversion_result['status'],
+                'success_count' => $conversion_result['success_count'],
+                'warning_count' => $conversion_result['warning_count'],
+                'error_count' => $conversion_result['error_count'],
+                'processed_count' => $conversion_result['processed_count'],
+                'total_count' => $conversion_result['total_count'],
+                'results' => $conversion_result['results'],
+            ));
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX batch convert error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred during batch conversion.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for exporting field groups as ZIP.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_export_field_groups() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group keys from request
+            $field_group_keys = isset($_POST['field_group_keys']) ? $_POST['field_group_keys'] : [];
+            $format = isset($_POST['format']) ? $this->security->sanitize_input($_POST['format']) : 'auto';
+            
+            if (!is_array($field_group_keys) || empty($field_group_keys)) {
+                wp_send_json_error(array(
+                    'message' => __('No field groups selected for export.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Sanitize field group keys
+            $field_group_keys = array_map(array($this->security, 'sanitize_input'), $field_group_keys);
+            
+            $this->logger->info('Starting field group export via AJAX', array(
+                'format' => $format,
+                'field_group_count' => count($field_group_keys),
+            ));
+            
+            // Get field groups from scan results
+            $scan_results = $this->scanner->get_cached_results();
+            
+            if (!$scan_results || empty($scan_results['field_groups'])) {
+                wp_send_json_error(array(
+                    'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Filter field groups by selected keys
+            $field_groups_to_export = [];
+            foreach ($scan_results['field_groups'] as $field_group) {
+                if (in_array($field_group['key'], $field_group_keys)) {
+                    $field_groups_to_export[] = $field_group;
+                }
+            }
+            
+            if (empty($field_groups_to_export)) {
+                wp_send_json_error(array(
+                    'message' => __('Selected field groups not found in scan results.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Export field groups
+            $export_result = $this->file_manager->export_files($field_groups_to_export, $format);
+            
+            if ($export_result['success']) {
+                wp_send_json_success(array(
+                    'message' => $export_result['message'],
+                    'download_url' => $export_result['download_url'],
+                    'filename' => $export_result['filename'],
+                    'format' => $export_result['format'],
+                    'file_count' => $export_result['file_count'],
+                    'total_size' => $export_result['total_size'],
+                    'exported_files' => $export_result['exported_files'],
+                    'failed_exports' => isset($export_result['failed_exports']) ? $export_result['failed_exports'] : [],
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => $export_result['message'],
+                    'failed_exports' => isset($export_result['failed_exports']) ? $export_result['failed_exports'] : [],
+                ));
+            }
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX export field groups error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred during field group export.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
+     * AJAX handler for copying field group JSON to clipboard.
+     *
+     * @since    1.0.0
+     */
+    public function ajax_copy_field_group_json() {
+        // Verify nonce and capabilities
+        if (!$this->verify_ajax_request()) {
+            return;
+        }
+
+        try {
+            // Get field group key from request
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_input($_POST['field_group_key']) : '';
+            
+            if (empty($field_group_key)) {
+                wp_send_json_error(array(
+                    'message' => __('Field group key is required.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            $this->logger->info('Copying field group JSON to clipboard', array(
+                'field_group_key' => $field_group_key,
+            ));
+            
+            // Get field groups from scan results
+            $scan_results = $this->scanner->get_cached_results();
+            
+            if (!$scan_results || empty($scan_results['field_groups'])) {
+                wp_send_json_error(array(
+                    'message' => __('No scan results found. Please scan theme files first.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Find the specific field group
+            $field_group = null;
+            foreach ($scan_results['field_groups'] as $group) {
+                if ($group['key'] === $field_group_key) {
+                    $field_group = $group;
+                    break;
+                }
+            }
+            
+            if (!$field_group) {
+                wp_send_json_error(array(
+                    'message' => __('Field group not found in scan results.', 'acf-php-json-converter'),
+                ));
+                return;
+            }
+            
+            // Export field group as JSON string
+            $export_result = $this->file_manager->export_field_group_as_json($field_group);
+            
+            if ($export_result['success']) {
+                wp_send_json_success(array(
+                    'message' => sprintf(
+                        __('JSON for field group "%s" is ready to copy.', 'acf-php-json-converter'),
+                        $export_result['title']
+                    ),
+                    'json' => $export_result['json'],
+                    'key' => $export_result['key'],
+                    'title' => $export_result['title'],
+                    'size' => $export_result['size'],
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => $export_result['message'],
+                ));
+            }
+            
+        } catch (Exception $e) {
+            $this->logger->error('AJAX copy field group JSON error: ' . $e->getMessage());
+            wp_send_json_error(array(
+                'message' => __('An error occurred while preparing JSON for clipboard.', 'acf-php-json-converter'),
+            ));
+        }
+    }
+
+    /**
      * AJAX handler for cancelling operations.
      *
      * @since    1.0.0
@@ -797,7 +1090,7 @@ class Admin_Controller {
         }
 
         try {
-            $operation_id = isset($_POST['operation_id']) ? $this->security->sanitize_text_field($_POST['operation_id']) : '';
+            $operation_id = isset($_POST['operation_id']) ? $this->security->sanitize_input($_POST['operation_id']) : '';
             
             if (empty($operation_id)) {
                 wp_send_json_error(array(
@@ -838,7 +1131,7 @@ class Admin_Controller {
         try {
             // Get field group keys from request
             $field_group_keys = isset($_POST['field_group_keys']) ? $_POST['field_group_keys'] : array();
-            $conversion_direction = isset($_POST['conversion_direction']) ? $this->security->sanitize_text_field($_POST['conversion_direction']) : 'php_to_json';
+            $conversion_direction = isset($_POST['conversion_direction']) ? $this->security->sanitize_input($_POST['conversion_direction']) : 'php_to_json';
             
             if (empty($field_group_keys) || !is_array($field_group_keys)) {
                 wp_send_json_error($this->error_handler->handle_error(
@@ -850,7 +1143,7 @@ class Admin_Controller {
             }
 
             // Sanitize field group keys
-            $field_group_keys = array_map(array($this->security, 'sanitize_text_field'), $field_group_keys);
+            $field_group_keys = array_map(array($this->security, 'sanitize_input'), $field_group_keys);
 
             $this->logger->info('Starting batch conversion with progress tracking', array(
                 'field_group_count' => count($field_group_keys),
@@ -955,7 +1248,7 @@ class Admin_Controller {
         // Convert to JSON format using converter service
         $conversion_result = $this->converter->convert_php_to_json($field_group);
         
-        if (!$conversion_result['success']) {
+        if ($conversion_result['status'] === 'error') {
             return $this->error_handler->handle_error(
                 'conversion_failed',
                 __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
@@ -1112,7 +1405,7 @@ class Admin_Controller {
 
         try {
             // Get field group key from request
-            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_text_field($_POST['field_group_key']) : '';
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_input($_POST['field_group_key']) : '';
             
             if (empty($field_group_key)) {
                 wp_send_json_error(array(
@@ -1154,7 +1447,7 @@ class Admin_Controller {
             // Convert to JSON format using converter service
             $conversion_result = $this->converter->convert_php_to_json($field_group);
             
-            if (!$conversion_result['success']) {
+            if ($conversion_result['status'] === 'error') {
                 wp_send_json_error(array(
                     'message' => __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
                     'errors' => $conversion_result['errors'],
@@ -1190,7 +1483,7 @@ class Admin_Controller {
 
         try {
             // Get field group key from request
-            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_text_field($_POST['field_group_key']) : '';
+            $field_group_key = isset($_POST['field_group_key']) ? $this->security->sanitize_input($_POST['field_group_key']) : '';
             
             if (empty($field_group_key)) {
                 wp_send_json_error(array(
@@ -1232,7 +1525,7 @@ class Admin_Controller {
             // Convert to JSON format using converter service
             $conversion_result = $this->converter->convert_php_to_json($field_group);
             
-            if (!$conversion_result['success']) {
+            if ($conversion_result['status'] === 'error') {
                 wp_send_json_error(array(
                     'message' => __('Failed to convert field group to JSON.', 'acf-php-json-converter'),
                     'errors' => $conversion_result['errors'],
@@ -1281,7 +1574,7 @@ class Admin_Controller {
         try {
             // Get field group keys and direction from request
             $field_group_keys = isset($_POST['field_group_keys']) ? $_POST['field_group_keys'] : array();
-            $direction = isset($_POST['direction']) ? $this->security->sanitize_text_field($_POST['direction']) : 'php_to_json';
+            $direction = isset($_POST['direction']) ? $this->security->sanitize_input($_POST['direction']) : 'php_to_json';
             
             if (empty($field_group_keys) || !is_array($field_group_keys)) {
                 wp_send_json_error(array(
@@ -1291,7 +1584,7 @@ class Admin_Controller {
             }
             
             // Sanitize field group keys
-            $field_group_keys = array_map(array($this->security, 'sanitize_text_field'), $field_group_keys);
+            $field_group_keys = array_map(array($this->security, 'sanitize_input'), $field_group_keys);
             
             $this->logger->info('Starting batch processing', array(
                 'field_group_keys' => $field_group_keys,
@@ -1386,7 +1679,7 @@ class Admin_Controller {
                 // Convert to JSON format
                 $conversion_result = $this->converter->convert_php_to_json($field_group);
                 
-                if (!$conversion_result['success']) {
+                if ($conversion_result['status'] === 'error') {
                     $results['errors'][] = array(
                         'key' => $field_group_key,
                         'title' => $field_group['title'],

@@ -148,14 +148,15 @@ class Converter_Service {
     }
 
     /**
-     * Batch convert multiple field groups.
+     * Batch convert multiple field groups with progress tracking.
      *
      * @since    1.0.0
      * @param    array     $field_groups    Field groups to convert.
      * @param    string    $direction       Conversion direction ('php_to_json' or 'json_to_php').
+     * @param    string    $operation_id    Optional operation ID for progress tracking.
      * @return   array     Conversion results.
      */
-    public function batch_convert($field_groups, $direction) {
+    public function batch_convert($field_groups, $direction, $operation_id = null) {
         if (!is_array($field_groups) || empty($field_groups)) {
             return [
                 'status' => 'error',
@@ -164,18 +165,37 @@ class Converter_Service {
             ];
         }
         
+        // Initialize progress tracking if operation ID provided
+        if ($operation_id) {
+            $this->init_progress_tracking($operation_id, count($field_groups));
+        }
+        
         $this->logger->info('Starting batch conversion', [
             'direction' => $direction,
             'count' => count($field_groups),
+            'operation_id' => $operation_id,
         ]);
         
         $results = [];
         $success_count = 0;
         $warning_count = 0;
         $error_count = 0;
+        $processed_count = 0;
         
         foreach ($field_groups as $index => $field_group) {
+            // Check for cancellation
+            if ($operation_id && $this->is_operation_cancelled($operation_id)) {
+                $this->logger->info('Batch conversion cancelled by user', ['operation_id' => $operation_id]);
+                break;
+            }
+            
             $result = null;
+            $key = isset($field_group['key']) ? $field_group['key'] : "field_group_{$index}";
+            
+            // Update progress
+            if ($operation_id) {
+                $this->update_progress($operation_id, $processed_count, "Converting {$key}...");
+            }
             
             try {
                 if ($direction === 'php_to_json') {
@@ -202,24 +222,35 @@ class Converter_Service {
                     $error_count++;
                 }
                 
-                // Add field group key to result for identification
-                $key = isset($field_group['key']) ? $field_group['key'] : "field_group_{$index}";
+                // Add field group metadata to result
                 $result['key'] = $key;
+                $result['title'] = isset($field_group['title']) ? $field_group['title'] : $key;
+                $result['processed_at'] = current_time('mysql');
                 
                 $results[$key] = $result;
+                
             } catch (\Exception $e) {
                 $this->logger->error('Exception during batch conversion', [
                     'message' => $e->getMessage(),
-                    'field_group' => isset($field_group['key']) ? $field_group['key'] : "field_group_{$index}",
+                    'field_group' => $key,
+                    'operation_id' => $operation_id,
                 ]);
                 
-                $key = isset($field_group['key']) ? $field_group['key'] : "field_group_{$index}";
                 $results[$key] = [
                     'status' => 'error',
                     'errors' => [$e->getMessage()],
                     'key' => $key,
+                    'title' => isset($field_group['title']) ? $field_group['title'] : $key,
+                    'processed_at' => current_time('mysql'),
                 ];
                 $error_count++;
+            }
+            
+            $processed_count++;
+            
+            // Update progress after processing
+            if ($operation_id) {
+                $this->update_progress($operation_id, $processed_count, "Processed {$key}");
             }
         }
         
@@ -231,11 +262,18 @@ class Converter_Service {
             $status = $success_count === 0 ? 'warning' : 'partial';
         }
         
+        // Complete progress tracking
+        if ($operation_id) {
+            $this->complete_progress($operation_id, $status);
+        }
+        
         $this->logger->info('Batch conversion completed', [
             'status' => $status,
             'success_count' => $success_count,
             'warning_count' => $warning_count,
             'error_count' => $error_count,
+            'processed_count' => $processed_count,
+            'operation_id' => $operation_id,
         ]);
         
         return [
@@ -244,8 +282,89 @@ class Converter_Service {
             'success_count' => $success_count,
             'warning_count' => $warning_count,
             'error_count' => $error_count,
+            'processed_count' => $processed_count,
+            'total_count' => count($field_groups),
             'results' => $results,
+            'operation_id' => $operation_id,
         ];
+    }
+
+    /**
+     * Initialize progress tracking for batch operation.
+     *
+     * @since    1.0.0
+     * @param    string    $operation_id    Operation ID.
+     * @param    int       $total_items     Total items to process.
+     */
+    protected function init_progress_tracking($operation_id, $total_items) {
+        $progress_data = [
+            'operation_id' => $operation_id,
+            'status' => 'running',
+            'current' => 0,
+            'total' => $total_items,
+            'percentage' => 0,
+            'message' => 'Initializing batch conversion...',
+            'started_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql'),
+        ];
+        
+        set_transient('acf_php_json_progress_' . $operation_id, $progress_data, 3600);
+    }
+
+    /**
+     * Update progress for batch operation.
+     *
+     * @since    1.0.0
+     * @param    string    $operation_id    Operation ID.
+     * @param    int       $current         Current progress.
+     * @param    string    $message         Progress message.
+     */
+    protected function update_progress($operation_id, $current, $message) {
+        $progress_data = get_transient('acf_php_json_progress_' . $operation_id);
+        
+        if ($progress_data) {
+            $progress_data['current'] = $current;
+            $progress_data['percentage'] = $progress_data['total'] > 0 ? round(($current / $progress_data['total']) * 100) : 0;
+            $progress_data['message'] = $message;
+            $progress_data['updated_at'] = current_time('mysql');
+            
+            set_transient('acf_php_json_progress_' . $operation_id, $progress_data, 3600);
+        }
+    }
+
+    /**
+     * Complete progress tracking for batch operation.
+     *
+     * @since    1.0.0
+     * @param    string    $operation_id    Operation ID.
+     * @param    string    $status          Final status.
+     */
+    protected function complete_progress($operation_id, $status) {
+        $progress_data = get_transient('acf_php_json_progress_' . $operation_id);
+        
+        if ($progress_data) {
+            $progress_data['status'] = 'completed';
+            $progress_data['final_status'] = $status;
+            $progress_data['current'] = $progress_data['total'];
+            $progress_data['percentage'] = 100;
+            $progress_data['message'] = 'Batch conversion completed';
+            $progress_data['completed_at'] = current_time('mysql');
+            $progress_data['updated_at'] = current_time('mysql');
+            
+            set_transient('acf_php_json_progress_' . $operation_id, $progress_data, 3600);
+        }
+    }
+
+    /**
+     * Check if operation is cancelled.
+     *
+     * @since    1.0.0
+     * @param    string    $operation_id    Operation ID.
+     * @return   bool      True if cancelled, false otherwise.
+     */
+    protected function is_operation_cancelled($operation_id) {
+        $cancellation_key = 'acf_php_json_cancel_' . $operation_id;
+        return get_transient($cancellation_key) === true;
     }
 
     /**

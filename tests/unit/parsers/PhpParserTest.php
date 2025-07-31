@@ -9,10 +9,12 @@ use ACF_PHP_JSON_Converter\Parsers\PHP_Parser;
 use ACF_PHP_JSON_Converter\Utilities\Logger;
 use ACF_PHP_JSON_Converter\Utilities\Security;
 
+use PHPUnit\Framework\TestCase;
+
 /**
  * PHP Parser test case.
  */
-class PHP_ParserTest extends WP_UnitTestCase {
+class PHP_ParserTest extends TestCase {
 
     /**
      * PHP Parser instance.
@@ -45,7 +47,7 @@ class PHP_ParserTest extends WP_UnitTestCase {
     /**
      * Set up.
      */
-    public function setUp() {
+    public function setUp(): void {
         parent::setUp();
         
         // Create mock objects
@@ -70,7 +72,7 @@ class PHP_ParserTest extends WP_UnitTestCase {
     /**
      * Tear down.
      */
-    public function tearDown() {
+    public function tearDown(): void {
         // Remove test file
         if (file_exists($this->test_file)) {
             unlink($this->test_file);

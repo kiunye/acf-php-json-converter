@@ -82,6 +82,11 @@ class Plugin {
         // Register utility services
         $this->services['logger'] = new Utilities\Logger();
         $this->services['security'] = new Utilities\Security();
+        $this->services['error_handler'] = new Utilities\Error_Handler(
+            $this->services['logger'],
+            $this->get_plugin_settings()
+        );
+        // Progress tracker will be created on-demand by error handler
         
         // Register core services
         $this->services['file_manager'] = new Services\File_Manager(
@@ -106,7 +111,8 @@ class Plugin {
             $this->services['converter'],
             $this->services['file_manager'],
             $this->services['logger'],
-            $this->services['security']
+            $this->services['security'],
+            $this->services['error_handler']
         );
     }
 
@@ -140,6 +146,11 @@ class Plugin {
         $this->loader->add_action('wp_ajax_acf_php_json_get_progress', $this->services['admin'], 'ajax_get_progress');
         $this->loader->add_action('wp_ajax_acf_php_json_cancel_operation', $this->services['admin'], 'ajax_cancel_operation');
         $this->loader->add_action('wp_ajax_acf_php_json_batch_convert_with_progress', $this->services['admin'], 'ajax_batch_convert_with_progress');
+        
+        // Batch processing and export AJAX handlers
+        $this->loader->add_action('wp_ajax_acf_php_json_batch_convert', $this->services['admin'], 'ajax_batch_convert');
+        $this->loader->add_action('wp_ajax_acf_php_json_export_field_groups', $this->services['admin'], 'ajax_export_field_groups');
+        $this->loader->add_action('wp_ajax_acf_php_json_copy_field_group_json', $this->services['admin'], 'ajax_copy_field_group_json');
     }
 
     /**
@@ -173,5 +184,27 @@ class Plugin {
             return $this->services[$service];
         }
         return null;
+    }
+
+    /**
+     * Get plugin settings.
+     *
+     * @since     1.0.0
+     * @return    array    Plugin settings.
+     */
+    private function get_plugin_settings() {
+        $default_settings = array(
+            'auto_create_local_json' => true,
+            'default_export_location' => 'theme',
+            'log_level' => 'error',
+            'log_user_actions' => false,
+            'error_display_mode' => 'both',
+            'max_error_notices' => 3,
+            'backup_retention_days' => 30,
+            'max_batch_size' => 50
+        );
+
+        $saved_settings = get_option('acf_php_json_converter_settings', array());
+        return array_merge($default_settings, $saved_settings);
     }
 }

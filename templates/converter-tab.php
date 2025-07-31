@@ -69,6 +69,10 @@
                         <span class="dashicons dashicons-migrate"></span>
                         <?php _e('Convert Selected', 'acf-php-json-converter'); ?>
                     </button>
+                    <button type="button" id="export-selected-btn" class="button button-secondary" disabled>
+                        <span class="dashicons dashicons-download"></span>
+                        <?php _e('Export Selected', 'acf-php-json-converter'); ?>
+                    </button>
                 </div>
             </div>
         </div>
