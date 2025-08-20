@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: ACF PHP-to-JSON Converter
- * Plugin URI: https://example.com/acf-php-json-converter
+ * Plugin URI: https://github.com/kiunye/acf-php-json-converter
  * Description: Automatically scans theme files for ACF field groups defined in PHP and converts them to JSON format for easy import/export and synchronization.
  * Version: 1.0.1
  * Author: Chris Araya
