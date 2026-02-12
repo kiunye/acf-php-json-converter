@@ -115,6 +115,24 @@ class Logger {
     private $max_log_age = 30;
 
     /**
+     * In-memory buffer for log entries (flushed to DB once per request).
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      array    $log_buffer    Buffered log entries.
+     */
+    private $log_buffer = array();
+
+    /**
+     * Whether shutdown hook has been registered for this request.
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      bool    $shutdown_registered    Shutdown flag.
+     */
+    private static $shutdown_registered = false;
+
+    /**
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
@@ -188,11 +206,17 @@ class Logger {
         // Format the log entry
         $log_entry = $this->format_log_entry($message, $level, $context);
 
-        // Store the log entry
+        // Write to file immediately (keep file persistence)
         $file_result = $this->write_log_to_file($log_entry);
-        $db_result = $this->write_log_to_db($log_entry);
-        
-        return ($file_result || $db_result);
+
+        // Buffer for DB instead of write per message (flushed on shutdown)
+        $this->log_buffer[] = $log_entry;
+        if (!self::$shutdown_registered) {
+            self::$shutdown_registered = true;
+            add_action('shutdown', array($this, 'flush_log_buffer_to_db'), 20);
+        }
+
+        return $file_result;
     }
 
     /**
@@ -338,31 +362,42 @@ class Logger {
     }
 
     /**
-     * Write a log entry to database.
+     * Flush buffered log entries to database (one get_option + one update_option per request).
      *
      * @since    1.0.0
-     * @param    array     $log_entry    Log entry.
      * @return   bool      True on success, false on failure.
      */
-    private function write_log_to_db($log_entry) {
+    public function flush_log_buffer_to_db() {
+        if (empty($this->log_buffer)) {
+            return true;
+        }
+
         // Get existing logs
         $logs = get_option($this->option_name, array());
-        
-        // Add new log entry
-        array_unshift($logs, $log_entry);
-        
+
+        // Prepend buffer (newest first) - buffer is chronological, so reverse to match DB order
+        foreach (array_reverse($this->log_buffer) as $log_entry) {
+            array_unshift($logs, $log_entry);
+        }
+
         // Limit number of logs
         if (count($logs) > $this->max_db_entries) {
             $logs = array_slice($logs, 0, $this->max_db_entries);
         }
-        
-        // Update error statistics for errors and warnings
-        if (in_array($log_entry['level'], array('error', 'warning'))) {
-            $this->update_error_stats($log_entry);
+
+        // Update error statistics for errors and warnings in buffer
+        foreach ($this->log_buffer as $log_entry) {
+            if (in_array($log_entry['level'], array('error', 'warning'))) {
+                $this->update_error_stats($log_entry);
+            }
         }
-        
-        // Update logs in database
-        return update_option($this->option_name, $logs);
+
+        $result = update_option($this->option_name, $logs);
+
+        // Clear buffer after flush to prevent double-write
+        $this->log_buffer = array();
+
+        return $result;
     }
 
     /**
@@ -435,6 +470,11 @@ class Logger {
     public function get_logs($level = '', $limit = 100) {
         // Get logs from database
         $logs = get_option($this->option_name, array());
+
+        // Prepend current request buffer so admin sees same-request logs
+        if (!empty($this->log_buffer)) {
+            $logs = array_merge(array_reverse($this->log_buffer), $logs);
+        }
         
         // Filter by level if specified
         if ($level && isset($this->log_levels[$level])) {
@@ -505,10 +545,14 @@ class Logger {
      */
     public function clear_logs($level = '') {
         if (empty($level)) {
-            // Clear all logs
+            // Clear all logs and buffer
+            $this->log_buffer = array();
             return delete_option($this->option_name);
         } else {
-            // Clear logs of specific level
+            // Clear logs of specific level (DB and buffer)
+            $this->log_buffer = array_filter($this->log_buffer, function($log) use ($level) {
+                return $log['level'] !== $level;
+            });
             $logs = get_option($this->option_name, array());
             
             $logs = array_filter($logs, function($log) use ($level) {

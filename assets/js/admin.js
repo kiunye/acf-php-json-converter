@@ -1806,7 +1806,9 @@
 
             // Add to progress log
             $progressLog.append('<li class="info">Converting: ' + escapeHtml(fieldGroupKey) + '</li>');
-            $progressLog.scrollTop($progressLog[0].scrollHeight);
+            if ($progressLog[0]) {
+                $progressLog.scrollTop($progressLog[0].scrollHeight);
+            }
 
             // Convert field group
             $.ajax({
@@ -1843,7 +1845,9 @@
                     $progressLog.append('<li class="error">✗ ' + escapeHtml(fieldGroupKey) + ' - Network error</li>');
                 },
                 complete: function () {
-                    $progressLog.scrollTop($progressLog[0].scrollHeight);
+                    if ($progressLog[0]) {
+                        $progressLog.scrollTop($progressLog[0].scrollHeight);
+                    }
                     currentIndex++;
 
                     // Process next after a short delay

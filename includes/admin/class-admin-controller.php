@@ -387,15 +387,15 @@ class Admin_Controller {
             }
             
             if (!empty($backup_files)) {
-                $backup_path = $this->file_manager->create_backup($backup_files);
+                $backup_path = $this->file_manager->create_backup_direct($backup_files);
                 if (empty($backup_path)) {
                     $this->logger->warning('Failed to create backup before conversion');
                 }
             }
             
-            // Write JSON file to acf-json directory
+            // Write JSON file to acf-json directory (direct PHP, no WP_Filesystem)
             $filename = $field_group['key'] . '.json';
-            $write_result = $this->file_manager->write_json_file($filename, $conversion_result['data']);
+            $write_result = $this->file_manager->write_json_file_direct($filename, $conversion_result['data']);
             
             if (!$write_result) {
                 wp_send_json_error(array(
@@ -871,17 +871,17 @@ class Admin_Controller {
                 }
                 
                 if (!empty($backup_files)) {
-                    $backup_path = $this->file_manager->create_backup($backup_files);
+                    $backup_path = $this->file_manager->create_backup_direct($backup_files);
                     if (empty($backup_path)) {
                         $this->logger->warning('Failed to create backup before batch conversion');
                     }
                 }
                 
-                // Write successful conversions to JSON files
+                // Write successful conversions to JSON files (direct PHP, no WP_Filesystem)
                 foreach ($conversion_result['results'] as $key => $result) {
                     if ($result['status'] === 'success') {
                         $filename = $key . '.json';
-                        $write_result = $this->file_manager->write_json_file($filename, $result['data']);
+                        $write_result = $this->file_manager->write_json_file_direct($filename, $result['data']);
                         
                         if (!$write_result) {
                             $this->logger->error('Failed to write JSON file during batch conversion', [
@@ -1270,15 +1270,15 @@ class Admin_Controller {
         }
         
         if (!empty($backup_files)) {
-            $backup_path = $this->file_manager->create_backup($backup_files);
+            $backup_path = $this->file_manager->create_backup_direct($backup_files);
             if (empty($backup_path)) {
                 $this->logger->warning('Failed to create backup before conversion', array('field_group_key' => $field_group_key));
             }
         }
         
-        // Write JSON file to acf-json directory
+        // Write JSON file to acf-json directory (direct PHP, no WP_Filesystem)
         $filename = $field_group['key'] . '.json';
-        $write_result = $this->file_manager->write_json_file($filename, $conversion_result['data']);
+        $write_result = $this->file_manager->write_json_file_direct($filename, $conversion_result['data']);
         
         if (!$write_result) {
             return $this->error_handler->handle_error(
@@ -1699,15 +1699,15 @@ class Admin_Controller {
                 }
                 
                 if (!empty($backup_files)) {
-                    $backup_path = $this->file_manager->create_backup($backup_files);
+                    $backup_path = $this->file_manager->create_backup_direct($backup_files);
                     if (empty($backup_path)) {
                         $this->logger->warning('Failed to create backup for field group: ' . $field_group_key);
                     }
                 }
                 
-                // Write JSON file
+                // Write JSON file (direct PHP, no WP_Filesystem)
                 $filename = $field_group['key'] . '.json';
-                $write_result = $this->file_manager->write_json_file($filename, $conversion_result['data']);
+                $write_result = $this->file_manager->write_json_file_direct($filename, $conversion_result['data']);
                 
                 if (!$write_result) {
                     $results['errors'][] = array(

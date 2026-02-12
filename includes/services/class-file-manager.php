@@ -366,6 +366,170 @@ class File_Manager {
     }
 
     /**
+     * Create ACF JSON directory using direct PHP (no WP_Filesystem).
+     *
+     * @since    1.0.0
+     * @param    string    $theme_path    Theme path. If empty, uses active theme.
+     * @return   bool      True on success, false on failure.
+     */
+    public function create_acf_json_directory_direct($theme_path = '') {
+        if (empty($theme_path)) {
+            $theme_path = get_stylesheet_directory();
+        }
+
+        if (!$this->security->validate_path($theme_path) || !is_dir($theme_path)) {
+            $this->logger->error('Invalid theme path: ' . $theme_path);
+            return false;
+        }
+
+        $acf_json_path = trailingslashit($theme_path) . $this->acf_json_dir;
+
+        if (is_dir($acf_json_path)) {
+            if (!$this->security->is_writable($acf_json_path)) {
+                $this->logger->error('ACF JSON directory exists but is not writable: ' . $acf_json_path);
+                return false;
+            }
+            return true;
+        }
+
+        if (!wp_mkdir_p($acf_json_path)) {
+            $this->logger->error('Failed to create ACF JSON directory: ' . $acf_json_path);
+            return false;
+        }
+
+        $chmod_dir = defined('FS_CHMOD_DIR') ? FS_CHMOD_DIR : 0755;
+        $chmod_file = defined('FS_CHMOD_FILE') ? FS_CHMOD_FILE : 0644;
+        @chmod($acf_json_path, $chmod_dir);
+
+        $index_file = trailingslashit($acf_json_path) . 'index.php';
+        if (file_put_contents($index_file, "<?php\n// Silence is golden.") === false) {
+            return false;
+        }
+        @chmod($index_file, $chmod_file);
+
+        return true;
+    }
+
+    /**
+     * Write JSON file using direct PHP (no WP_Filesystem).
+     *
+     * @since    1.0.0
+     * @param    string    $filename    File name.
+     * @param    array     $data        JSON data.
+     * @return   bool      True on success, false on failure.
+     */
+    public function write_json_file_direct($filename, $data) {
+        $filename = $this->security->sanitize_input($filename, 'filename');
+        if (empty($filename)) {
+            $this->logger->error('Invalid filename');
+            return false;
+        }
+
+        if (!is_array($data)) {
+            $this->logger->error('JSON data must be an array');
+            return false;
+        }
+
+        $theme_path = get_stylesheet_directory();
+        if (!$this->create_acf_json_directory_direct($theme_path)) {
+            return false;
+        }
+
+        $acf_json_path = trailingslashit($theme_path) . $this->acf_json_dir;
+        $file_path = trailingslashit($acf_json_path) . $filename;
+
+        if (pathinfo($file_path, PATHINFO_EXTENSION) !== 'json') {
+            $file_path .= '.json';
+        }
+
+        $json_data = wp_json_encode($data, JSON_PRETTY_PRINT);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->error('Failed to encode JSON data: ' . json_last_error_msg());
+            return false;
+        }
+
+        if (file_put_contents($file_path, $json_data) === false) {
+            $this->logger->error('Failed to write JSON file: ' . $file_path);
+            return false;
+        }
+
+        $chmod_file = defined('FS_CHMOD_FILE') ? FS_CHMOD_FILE : 0644;
+        @chmod($file_path, $chmod_file);
+
+        return true;
+    }
+
+    /**
+     * Create backup of files using direct PHP (no WP_Filesystem).
+     *
+     * @since    1.0.0
+     * @param    array     $files    Files to backup.
+     * @return   string    Backup path or empty string on failure.
+     */
+    public function create_backup_direct($files) {
+        if (!is_array($files) || empty($files)) {
+            $this->logger->error('No files provided for backup');
+            return '';
+        }
+
+        $upload_dir = wp_upload_dir();
+        $backup_dir = trailingslashit($upload_dir['basedir']) . $this->backup_dir;
+
+        if (!is_dir($backup_dir)) {
+            if (!wp_mkdir_p($backup_dir)) {
+                $this->logger->error('Failed to create backup directory: ' . $backup_dir);
+                return '';
+            }
+            $chmod_dir = defined('FS_CHMOD_DIR') ? FS_CHMOD_DIR : 0755;
+            $chmod_file = defined('FS_CHMOD_FILE') ? FS_CHMOD_FILE : 0644;
+            @chmod($backup_dir, $chmod_dir);
+
+            $index_file = trailingslashit($backup_dir) . 'index.php';
+            file_put_contents($index_file, "<?php\n// Silence is golden.");
+            @chmod($index_file, $chmod_file);
+
+            $htaccess_file = trailingslashit($backup_dir) . '.htaccess';
+            $htaccess_content = "# Deny access to all files\n";
+            $htaccess_content .= "<Files ~ \".*\">\n";
+            $htaccess_content .= "    Order Allow,Deny\n";
+            $htaccess_content .= "    Deny from all\n";
+            $htaccess_content .= "</Files>\n";
+            file_put_contents($htaccess_file, $htaccess_content);
+            @chmod($htaccess_file, $chmod_file);
+        } elseif (!$this->security->is_writable($backup_dir)) {
+            $this->logger->error('Backup directory exists but is not writable: ' . $backup_dir);
+            return '';
+        }
+
+        $timestamp = current_time('timestamp');
+        $backup_subdir = trailingslashit($backup_dir) . date('Y-m-d-H-i-s', $timestamp);
+
+        if (!wp_mkdir_p($backup_subdir)) {
+            $this->logger->error('Failed to create backup subdirectory: ' . $backup_subdir);
+            return '';
+        }
+
+        $chmod_dir = defined('FS_CHMOD_DIR') ? FS_CHMOD_DIR : 0755;
+        $chmod_file = defined('FS_CHMOD_FILE') ? FS_CHMOD_FILE : 0644;
+        @chmod($backup_subdir, $chmod_dir);
+
+        $copied_files = array();
+        foreach ($files as $file) {
+            if (!$this->security->validate_path($file) || !file_exists($file)) {
+                continue;
+            }
+            $file_name = basename($file);
+            $backup_file = trailingslashit($backup_subdir) . $file_name;
+            if (@copy($file, $backup_file)) {
+                $copied_files[] = $file;
+                @chmod($backup_file, $chmod_file);
+            }
+        }
+
+        return empty($copied_files) ? '' : $backup_subdir;
+    }
+
+    /**
      * Export field groups as downloadable files.
      *
      * @since    1.0.0
