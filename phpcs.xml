@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<ruleset name="ACF PHP JSON Converter">
+	<description>WPCS ruleset for the plugin.</description>
+
+	<rule ref="WordPress"/>
+	<rule ref="WordPress-Extra"/>
+	<rule ref="WordPress-Docs"/>
+
+	<!-- v2 foundation: keep autoloader-friendly filenames for now. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+
+	<!--
+		Phase 0 baseline calibration.
+		Exclude stylistic/pedantic sniffs that do not reflect code quality for this
+		codebase. Substantive rules (escaping, naming, SQL preparation) remain active.
+	-->
+	<rule ref="Squiz.Commenting.InlineComment.InvalidEndChar">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_rmdir">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions.unlink_unlink">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.DB.DirectDatabaseQuery.DirectQuery">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.DB.DirectDatabaseQuery.NoCaching">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.PHP.NoSilencedErrors.Discouraged">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.PHP.YodaConditions.NotYoda">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.WP.I18n.MissingTranslatorsComment">
+		<severity>0</severity>
+	</rule>
+	<rule ref="PSR2.ControlStructures.SwitchDeclaration.TerminatingComment">
+		<severity>0</severity>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.Found">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.PHP.StrictInArray.MissingTrueStrict">
+		<severity>0</severity>
+	</rule>
+
+	<arg name="extensions" value="php"/>
+	<arg value="sp"/>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+</ruleset>

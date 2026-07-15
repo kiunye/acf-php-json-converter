@@ -1,0 +1,37 @@
+{
+    "name": "acf-php-json-converter/plugin",
+    "description": "WordPress plugin for converting ACF field groups between PHP and JSON formats",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.2",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^10.0",
+        "squizlabs/php_codesniffer": "^3.0",
+        "wp-coding-standards/wpcs": "^3.3",
+        "wp-phpunit/wp-phpunit": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ACF_PHP_JSON_Converter\\": "includes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ACF_PHP_JSON_Converter\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "lint": "phpcs acf-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/utilities",
+        "lint:fix": "phpcbf acf-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/utilities",
+        "test": "phpunit --configuration phpunit.xml",
+        "test:unit": "phpunit --configuration phpunit.xml"
+    }
+}

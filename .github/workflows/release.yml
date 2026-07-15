@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build_zip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install production dependencies
+        run: composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+
+      - name: Prepare release directory
+        run: |
+          mkdir -p release/acf-php-json-converter
+          rsync -a --delete \
+            --exclude="release" \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="tests" \
+            --exclude="phpunit.xml" \
+            --exclude="phpcs.xml" \
+            --exclude=".phpunit.result.cache" \
+            --exclude=".phpunit.cache" \
+            ./ release/acf-php-json-converter/
+
+      - name: Build zip
+        run: |
+          cd release
+          zip -r "acf-php-json-converter-${GITHUB_REF_NAME}.zip" acf-php-json-converter
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/acf-php-json-converter-${{ github.ref_name }}.zip
+
