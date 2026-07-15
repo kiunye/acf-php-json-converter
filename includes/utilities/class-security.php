@@ -3,11 +3,11 @@
  * Security Utility.
  *
  * @since      1.0.0
- * @package    ACF_PHP_JSON_Converter
- * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @package    Field_Group_PHP_JSON_Converter
+ * @subpackage Field_Group_PHP_JSON_Converter/Utilities
  */
 
-namespace ACF_PHP_JSON_Converter\Utilities;
+namespace Field_Group_PHP_JSON_Converter\Utilities;
 
 /**
  * Security Utility Class.
@@ -59,9 +59,9 @@ class Security {
 	 */
 	public function __construct() {
 		// Apply filters to allow customization of security settings
-		$this->required_capability = apply_filters( 'acf_php_json_converter_required_capability', $this->required_capability );
-		$this->allowed_extensions  = apply_filters( 'acf_php_json_converter_allowed_extensions', $this->allowed_extensions );
-		$this->disallowed_dirs     = apply_filters( 'acf_php_json_converter_disallowed_dirs', $this->disallowed_dirs );
+		$this->required_capability = apply_filters( 'field_group_php_json_converter_required_capability', $this->required_capability );
+		$this->allowed_extensions  = apply_filters( 'field_group_php_json_converter_allowed_extensions', $this->allowed_extensions );
+		$this->disallowed_dirs     = apply_filters( 'field_group_php_json_converter_disallowed_dirs', $this->disallowed_dirs );
 	}
 
 	/**
@@ -72,7 +72,7 @@ class Security {
 	 * @param    string $action    Action name.
 	 * @return   bool      True if nonce is valid, false otherwise.
 	 */
-	public function verify_nonce( $nonce, $action = 'acf_php_json_converter_nonce' ) {
+	public function verify_nonce( $nonce, $action = 'field_group_php_json_converter_nonce' ) {
 		if ( empty( $nonce ) ) {
 			return false;
 		}
@@ -104,7 +104,7 @@ class Security {
 	 * @param    string $capability    Capability to check.
 	 * @return   bool      True if request is valid, false otherwise.
 	 */
-	public function verify_request( $nonce, $action = 'acf_php_json_converter_nonce', $capability = '' ) {
+	public function verify_request( $nonce, $action = 'field_group_php_json_converter_nonce', $capability = '' ) {
 		// Check nonce
 		if ( ! $this->verify_nonce( $nonce, $action ) ) {
 			return false;

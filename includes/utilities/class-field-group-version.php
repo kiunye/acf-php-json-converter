@@ -2,17 +2,17 @@
 /**
  * ACF version detection helpers.
  *
- * @package ACF_PHP_JSON_Converter
+ * @package Field_Group_PHP_JSON_Converter
  */
 
-namespace ACF_PHP_JSON_Converter\Utilities;
+namespace Field_Group_PHP_JSON_Converter\Utilities;
 
 /**
  * Detects ACF version for schema differences.
  *
- * @package ACF_PHP_JSON_Converter
+ * @package Field_Group_PHP_JSON_Converter
  */
-final class ACF_Version {
+final class Field_Group_Version {
 	/**
 	 * Get detected ACF version.
 	 *

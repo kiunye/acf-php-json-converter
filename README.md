@@ -1,4 +1,4 @@
-# ACF PHP-to-JSON Converter Plugin
+# Field Group PHP-JSON Converter Plugin
 
 A comprehensive WordPress plugin that automatically scans theme files for ACF field groups defined in PHP using `acf_add_local_field_group()` and converts them to JSON format for easy import/export and synchronization.
 
@@ -23,7 +23,7 @@ A comprehensive WordPress plugin that automatically scans theme files for ACF fi
 
 ## Installation
 
-1. Upload the plugin files to `/wp-content/plugins/acf-php-json-converter/`
+1. Upload the plugin files to `/wp-content/plugins/field-group-php-json-converter/`
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Navigate to Tools > ACF PHP-JSON Converter
 
@@ -127,7 +127,7 @@ vendor/bin/phpunit --filter="Security"
 ### Code Structure
 
 ```
-acf-php-json-converter/
+field-group-php-json-converter/
 ├── includes/
 │   ├── admin/                  # Admin interface
 │   ├── services/              # Core business logic
@@ -171,7 +171,7 @@ acf-php-json-converter/
 Enable debug mode by adding to wp-config.php:
 
 ```php
-define('ACF_PHP_JSON_CONVERTER_DEBUG', true);
+define('FIELD_GROUP_PHP_JSON_CONVERTER_DEBUG', true);
 ```
 
 This will:
@@ -254,7 +254,7 @@ This will:
 // In wp-config.php
 define('WP_DEBUG', true);
 define('WP_DEBUG_LOG', true);
-define('ACF_PHP_JSON_CONVERTER_DEBUG', true);
+define('FIELD_GROUP_PHP_JSON_CONVERTER_DEBUG', true);
 
 // Set plugin log level to debug
 // Go to Settings > Logging Level > Debug
@@ -263,11 +263,11 @@ define('ACF_PHP_JSON_CONVERTER_DEBUG', true);
 #### Test Individual Components
 ```php
 // Test PHP array parsing
-$parser = new ACF_PHP_JSON_Converter\Parsers\PHP_Parser($logger, $security);
+$parser = new Field_Group_PHP_JSON_Converter\Parsers\PHP_Parser($logger, $security);
 $result = $parser->safely_evaluate_array($your_array_string);
 
 // Test conversion
-$converter = new ACF_PHP_JSON_Converter\Services\Converter_Service($logger, $security);
+$converter = new Field_Group_PHP_JSON_Converter\Services\Converter_Service($logger, $security);
 $result = $converter->convert_php_to_json($field_group_data);
 ```
 
@@ -302,7 +302,7 @@ echo 'Memory limit: ' . ini_get('memory_limit');
 #### Database and Caching Issues
 ```php
 // Clear plugin caches
-delete_transient('acf_php_json_converter_scan_results');
+delete_transient('field_group_php_json_converter_scan_results');
 
 // Check for database errors
 global $wpdb;

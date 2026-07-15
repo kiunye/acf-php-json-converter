@@ -1,5 +1,5 @@
 {
-    "name": "acf-php-json-converter/plugin",
+    "name": "field-group-php-json-converter/plugin",
     "description": "WordPress plugin for converting ACF field groups between PHP and JSON formats",
     "type": "wordpress-plugin",
     "require": {
@@ -15,12 +15,12 @@
     },
     "autoload": {
         "psr-4": {
-            "ACF_PHP_JSON_Converter\\": "includes/"
+            "Field_Group_PHP_JSON_Converter\\": "includes/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "ACF_PHP_JSON_Converter\\Tests\\": "tests/"
+            "Field_Group_PHP_JSON_Converter\\Tests\\": "tests/"
         }
     },
     "config": {
@@ -29,8 +29,8 @@
         }
     },
     "scripts": {
-        "lint": "phpcs acf-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/utilities",
-        "lint:fix": "phpcbf acf-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/utilities",
+        "lint": "phpcs field-group-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/autoload.php includes/parsers includes/converters includes/utilities",
+        "lint:fix": "phpcbf field-group-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/autoload.php includes/parsers includes/converters includes/utilities",
         "test": "phpunit --configuration phpunit.xml",
         "test:unit": "phpunit --configuration phpunit.xml"
     }

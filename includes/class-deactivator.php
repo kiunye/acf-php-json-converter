@@ -3,10 +3,10 @@
  * Fired during plugin deactivation.
  *
  * @since      1.0.0
- * @package    ACF_PHP_JSON_Converter
+ * @package    Field_Group_PHP_JSON_Converter
  */
 
-namespace ACF_PHP_JSON_Converter;
+namespace Field_Group_PHP_JSON_Converter;
 
 /**
  * Fired during plugin deactivation.
@@ -24,7 +24,7 @@ class Deactivator {
 	 */
 	public static function deactivate() {
 		// Clear any transients used by the plugin
-		delete_transient( 'acf_php_json_converter_scan_cache' );
+		delete_transient( 'field_group_php_json_converter_scan_cache' );
 
 		// Clean up any temporary files
 		self::cleanup_temp_files();
@@ -40,7 +40,7 @@ class Deactivator {
 		$upload_dir = wp_upload_dir();
 
 		// Define temp directory path
-		$temp_dir = trailingslashit( $upload_dir['basedir'] ) . 'acf-php-json-converter-temp';
+		$temp_dir = trailingslashit( $upload_dir['basedir'] ) . 'field-group-php-json-converter-temp';
 
 		// Check if directory exists
 		if ( is_dir( $temp_dir ) ) {

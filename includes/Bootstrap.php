@@ -2,15 +2,15 @@
 /**
  * Plugin bootstrap / composition root.
  *
- * @package ACF_PHP_JSON_Converter
+ * @package Field_Group_PHP_JSON_Converter
  */
 
-namespace ACF_PHP_JSON_Converter;
+namespace Field_Group_PHP_JSON_Converter;
 
 /**
  * Main bootstrap for wiring plugin services.
  *
- * @package ACF_PHP_JSON_Converter
+ * @package Field_Group_PHP_JSON_Converter
  */
 final class Bootstrap {
 	/**
