@@ -3,28 +3,22 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
          bootstrap="tests/bootstrap.php"
          cacheResultFile=".phpunit.result.cache"
-         executionOrder="depends,defects"
-         forceCoversAnnotation="false"
-         beStrictAboutCoversAnnotation="true"
-         beStrictAboutOutputDuringTests="true"
-         beStrictAboutTodoAnnotatedTests="true"
-         convertDeprecationsToExceptions="true"
+         executionOrder="depends"
          failOnRisky="true"
          failOnWarning="true"
-         verbose="true">
+         beStrictAboutOutputDuringTests="true">
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/unit</directory>
         </testsuite>
     </testsuites>
 
-    <coverage cacheDirectory=".phpunit.cache/code-coverage"
-              processUncoveredFiles="true">
+    <source>
         <include>
             <directory suffix=".php">./includes</directory>
         </include>
         <exclude>
             <directory>./vendor</directory>
         </exclude>
-    </coverage>
+    </source>
 </phpunit>

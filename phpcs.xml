@@ -57,6 +57,15 @@
 		<severity>0</severity>
 	</rule>
 
+	<!--
+		Internal exception messages are not echoed to the browser; they are
+		captured as Parser_Error objects. The ExceptionNotEscaped sniff cannot
+		distinguish this and would otherwise force needless escaping here.
+	-->
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<severity>0</severity>
+	</rule>
+
 	<arg name="extensions" value="php"/>
 	<arg value="sp"/>
 
