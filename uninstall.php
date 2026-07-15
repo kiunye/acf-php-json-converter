@@ -1,11 +1,11 @@
 <?php
 /**
- * Uninstall ACF PHP-to-JSON Converter.
+ * Uninstall Field Group PHP-JSON Converter.
  *
  * Deletes plugin options, transients, scheduled hooks, and log files so the
  * site is left clean after uninstall.
  *
- * @package ACF_PHP_JSON_Converter
+ * @package Field_Group_PHP_JSON_Converter
  */
 
 // Exit if not invoked through WordPress's uninstall process.
@@ -15,9 +15,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 // Delete plugin options.
 $options = array(
-	'acf_php_json_converter_settings',
-	'acf_php_json_converter_logs',
-	'acf_php_json_converter_error_stats',
+	'field_group_php_json_converter_settings',
+	'field_group_php_json_converter_logs',
+	'field_group_php_json_converter_error_stats',
 );
 foreach ( $options as $option ) {
 	delete_option( $option );
@@ -25,10 +25,10 @@ foreach ( $options as $option ) {
 
 // Delete named transients.
 $named_transients = array(
-	'acf_php_json_converter_scan_cache',
-	'acf_php_json_converter_cpt_scan_cache',
-	'acf_php_json_converter_taxonomy_scan_cache',
-	'acf_php_json_converter_full_scan_cache',
+	'field_group_php_json_converter_scan_cache',
+	'field_group_php_json_converter_cpt_scan_cache',
+	'field_group_php_json_converter_taxonomy_scan_cache',
+	'field_group_php_json_converter_full_scan_cache',
 );
 foreach ( $named_transients as $transient ) {
 	delete_transient( $transient );
@@ -48,11 +48,11 @@ if ( isset( $GLOBALS['wpdb'] ) ) {
 }
 
 // Remove the scheduled log cleanup hook.
-wp_clear_scheduled_hook( 'acf_php_json_converter_log_cleanup' );
+wp_clear_scheduled_hook( 'field_group_php_json_converter_log_cleanup' );
 
 // Remove the log directory created under uploads.
 $upload_dir = wp_upload_dir();
-$log_dir    = trailingslashit( $upload_dir['basedir'] ) . 'acf-php-json-converter-logs';
+$log_dir    = trailingslashit( $upload_dir['basedir'] ) . 'field-group-php-json-converter-logs';
 
 if ( file_exists( $log_dir ) ) {
 	$iterator = new RecursiveIteratorIterator(

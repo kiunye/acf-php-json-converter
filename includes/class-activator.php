@@ -3,10 +3,10 @@
  * Fired during plugin activation.
  *
  * @since      1.0.0
- * @package    ACF_PHP_JSON_Converter
+ * @package    Field_Group_PHP_JSON_Converter
  */
 
-namespace ACF_PHP_JSON_Converter;
+namespace Field_Group_PHP_JSON_Converter;
 
 /**
  * Fired during plugin activation.
@@ -42,12 +42,12 @@ class Activator {
 			'default_export_location' => 'acf-json',
 			'logging_level'           => 'error', // error, warning, info, debug
 			'backup_before_write'     => true,
-			'version'                 => ACF_PHP_JSON_CONVERTER_VERSION,
+			'version'                 => FIELD_GROUP_PHP_JSON_CONVERTER_VERSION,
 		);
 
 		// Only add options if they don't exist
-		if ( ! get_option( 'acf_php_json_converter_settings' ) ) {
-			add_option( 'acf_php_json_converter_settings', $default_options );
+		if ( ! get_option( 'field_group_php_json_converter_settings' ) ) {
+			add_option( 'field_group_php_json_converter_settings', $default_options );
 		}
 	}
 
@@ -65,7 +65,7 @@ class Activator {
 				function () {
 					?>
 				<div class="notice notice-error">
-					<p><?php esc_html_e( 'ACF PHP-to-JSON Converter requires PHP 8.0 or higher. Please upgrade your PHP version.', 'acf-php-json-converter' ); ?></p>
+					<p><?php esc_html_e( 'Field Group PHP-JSON Converter requires PHP 8.0 or higher. Please upgrade your PHP version.', 'field-group-php-json-converter' ); ?></p>
 				</div>
 					<?php
 				}
@@ -80,7 +80,7 @@ class Activator {
 				function () {
 					?>
 				<div class="notice notice-error">
-					<p><?php esc_html_e( 'ACF PHP-to-JSON Converter requires WordPress 6.5 or higher. Please upgrade your WordPress installation.', 'acf-php-json-converter' ); ?></p>
+					<p><?php esc_html_e( 'Field Group PHP-JSON Converter requires WordPress 6.5 or higher. Please upgrade your WordPress installation.', 'field-group-php-json-converter' ); ?></p>
 				</div>
 					<?php
 				}

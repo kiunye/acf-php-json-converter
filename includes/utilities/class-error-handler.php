@@ -3,11 +3,11 @@
  * Error Handler Utility.
  *
  * @since      1.0.0
- * @package    ACF_PHP_JSON_Converter
- * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @package    Field_Group_PHP_JSON_Converter
+ * @subpackage Field_Group_PHP_JSON_Converter/Utilities
  */
 
-namespace ACF_PHP_JSON_Converter\Utilities;
+namespace Field_Group_PHP_JSON_Converter\Utilities;
 
 /**
  * Error Handler Class.
@@ -199,20 +199,20 @@ class Error_Handler {
 	 */
 	protected function get_user_friendly_message( $error_code, $default_message ) {
 		$messages = array(
-			'file_not_found'    => __( 'The requested file could not be found. Please check the file path and try again.', 'acf-php-json-converter' ),
-			'permission_denied' => __( 'You do not have permission to perform this action. Please contact your administrator.', 'acf-php-json-converter' ),
-			'invalid_json'      => __( 'The JSON format is invalid. Please check your JSON syntax and try again.', 'acf-php-json-converter' ),
-			'invalid_php'       => __( 'The PHP code contains syntax errors. Please review and correct the code.', 'acf-php-json-converter' ),
-			'conversion_failed' => __( 'The conversion process failed. This may be due to unsupported field types or corrupted data.', 'acf-php-json-converter' ),
-			'file_write_failed' => __( 'Unable to write the file. Please check file permissions and available disk space.', 'acf-php-json-converter' ),
-			'backup_failed'     => __( 'Failed to create backup. The operation was cancelled to prevent data loss.', 'acf-php-json-converter' ),
-			'scan_failed'       => __( 'Theme scanning failed. This may be due to file permission issues or corrupted theme files.', 'acf-php-json-converter' ),
-			'acf_not_active'    => __( 'Advanced Custom Fields plugin is not active. Please activate ACF to use this converter.', 'acf-php-json-converter' ),
-			'theme_not_found'   => __( 'The active theme could not be found. Please check your WordPress installation.', 'acf-php-json-converter' ),
-			'memory_limit'      => __( 'The operation exceeded available memory. Try processing fewer items at once.', 'acf-php-json-converter' ),
-			'timeout'           => __( 'The operation timed out. Try processing fewer items or increase the server timeout limit.', 'acf-php-json-converter' ),
-			'network_error'     => __( 'A network error occurred. Please check your internet connection and try again.', 'acf-php-json-converter' ),
-			'database_error'    => __( 'A database error occurred. Please try again or contact support if the problem persists.', 'acf-php-json-converter' ),
+			'file_not_found'    => __( 'The requested file could not be found. Please check the file path and try again.', 'field-group-php-json-converter' ),
+			'permission_denied' => __( 'You do not have permission to perform this action. Please contact your administrator.', 'field-group-php-json-converter' ),
+			'invalid_json'      => __( 'The JSON format is invalid. Please check your JSON syntax and try again.', 'field-group-php-json-converter' ),
+			'invalid_php'       => __( 'The PHP code contains syntax errors. Please review and correct the code.', 'field-group-php-json-converter' ),
+			'conversion_failed' => __( 'The conversion process failed. This may be due to unsupported field types or corrupted data.', 'field-group-php-json-converter' ),
+			'file_write_failed' => __( 'Unable to write the file. Please check file permissions and available disk space.', 'field-group-php-json-converter' ),
+			'backup_failed'     => __( 'Failed to create backup. The operation was cancelled to prevent data loss.', 'field-group-php-json-converter' ),
+			'scan_failed'       => __( 'Theme scanning failed. This may be due to file permission issues or corrupted theme files.', 'field-group-php-json-converter' ),
+			'acf_not_active'    => __( 'Advanced Custom Fields plugin is not active. Please activate ACF to use this converter.', 'field-group-php-json-converter' ),
+			'theme_not_found'   => __( 'The active theme could not be found. Please check your WordPress installation.', 'field-group-php-json-converter' ),
+			'memory_limit'      => __( 'The operation exceeded available memory. Try processing fewer items at once.', 'field-group-php-json-converter' ),
+			'timeout'           => __( 'The operation timed out. Try processing fewer items or increase the server timeout limit.', 'field-group-php-json-converter' ),
+			'network_error'     => __( 'A network error occurred. Please check your internet connection and try again.', 'field-group-php-json-converter' ),
+			'database_error'    => __( 'A database error occurred. Please try again or contact support if the problem persists.', 'field-group-php-json-converter' ),
 		);
 
 		return isset( $messages[ $error_code ] ) ? $messages[ $error_code ] : $default_message;
@@ -230,72 +230,72 @@ class Error_Handler {
 		$default_options = array(
 			'file_not_found'    => array(
 				array(
-					'label'       => __( 'Check File Path', 'acf-php-json-converter' ),
+					'label'       => __( 'Check File Path', 'field-group-php-json-converter' ),
 					'action'      => 'verify_path',
 					'description' => __( 'Verify the file path is correct and the file exists.' ),
 				),
 				array(
-					'label'       => __( 'Refresh Scan', 'acf-php-json-converter' ),
+					'label'       => __( 'Refresh Scan', 'field-group-php-json-converter' ),
 					'action'      => 'refresh_scan',
 					'description' => __( 'Perform a fresh scan of theme files.' ),
 				),
 			),
 			'permission_denied' => array(
 				array(
-					'label'       => __( 'Check Permissions', 'acf-php-json-converter' ),
+					'label'       => __( 'Check Permissions', 'field-group-php-json-converter' ),
 					'action'      => 'check_permissions',
 					'description' => __( 'Verify you have the required user role and file permissions.' ),
 				),
 				array(
-					'label'       => __( 'Contact Administrator', 'acf-php-json-converter' ),
+					'label'       => __( 'Contact Administrator', 'field-group-php-json-converter' ),
 					'action'      => 'contact_admin',
 					'description' => __( 'Contact your site administrator for assistance.' ),
 				),
 			),
 			'invalid_json'      => array(
 				array(
-					'label'       => __( 'Validate JSON', 'acf-php-json-converter' ),
+					'label'       => __( 'Validate JSON', 'field-group-php-json-converter' ),
 					'action'      => 'validate_json',
 					'description' => __( 'Use a JSON validator to check your JSON syntax.' ),
 				),
 				array(
-					'label'       => __( 'Use Sample JSON', 'acf-php-json-converter' ),
+					'label'       => __( 'Use Sample JSON', 'field-group-php-json-converter' ),
 					'action'      => 'use_sample',
 					'description' => __( 'Try with a sample ACF field group JSON.' ),
 				),
 			),
 			'conversion_failed' => array(
 				array(
-					'label'       => __( 'Try Individual Conversion', 'acf-php-json-converter' ),
+					'label'       => __( 'Try Individual Conversion', 'field-group-php-json-converter' ),
 					'action'      => 'individual_conversion',
 					'description' => __( 'Convert field groups one at a time to identify problematic items.' ),
 				),
 				array(
-					'label'       => __( 'Check Field Types', 'acf-php-json-converter' ),
+					'label'       => __( 'Check Field Types', 'field-group-php-json-converter' ),
 					'action'      => 'check_field_types',
 					'description' => __( 'Ensure all field types are supported by your ACF version.' ),
 				),
 			),
 			'file_write_failed' => array(
 				array(
-					'label'       => __( 'Check Permissions', 'acf-php-json-converter' ),
+					'label'       => __( 'Check Permissions', 'field-group-php-json-converter' ),
 					'action'      => 'check_file_permissions',
 					'description' => __( 'Verify write permissions for the theme directory.' ),
 				),
 				array(
-					'label'       => __( 'Download Instead', 'acf-php-json-converter' ),
+					'label'       => __( 'Download Instead', 'field-group-php-json-converter' ),
 					'action'      => 'download_file',
 					'description' => __( 'Download the JSON file and upload it manually.' ),
 				),
 			),
 			'memory_limit'      => array(
 				array(
-					'label'       => __( 'Process Fewer Items', 'acf-php-json-converter' ),
+					'label'       => __( 'Process Fewer Items', 'field-group-php-json-converter' ),
 					'action'      => 'reduce_batch_size',
 					'description' => __( 'Select fewer field groups for batch processing.' ),
 				),
 				array(
-					'label'       => __( 'Increase Memory Limit', 'acf-php-json-converter' ),
+					'label'       => __( 'Increase Memory Limit', 'field-group-php-json-converter' ),
 					'action'      => 'increase_memory',
 					'description' => __( 'Contact your host to increase PHP memory limit.' ),
 				),
@@ -313,12 +313,12 @@ class Error_Handler {
 		if ( empty( $options ) ) {
 			$options = array(
 				array(
-					'label'       => __( 'Try Again', 'acf-php-json-converter' ),
+					'label'       => __( 'Try Again', 'field-group-php-json-converter' ),
 					'action'      => 'retry',
 					'description' => __( 'Retry the operation.' ),
 				),
 				array(
-					'label'       => __( 'Contact Support', 'acf-php-json-converter' ),
+					'label'       => __( 'Contact Support', 'field-group-php-json-converter' ),
 					'action'      => 'contact_support',
 					'description' => __( 'Contact support if the problem persists.' ),
 				),
@@ -342,7 +342,7 @@ class Error_Handler {
 			'timestamp'          => current_time( 'mysql' ),
 			'wordpress_version'  => get_bloginfo( 'version' ),
 			'php_version'        => PHP_VERSION,
-			'plugin_version'     => defined( 'ACF_PHP_JSON_CONVERTER_VERSION' ) ? ACF_PHP_JSON_CONVERTER_VERSION : 'unknown',
+			'plugin_version'     => defined( 'FIELD_GROUP_PHP_JSON_CONVERTER_VERSION' ) ? FIELD_GROUP_PHP_JSON_CONVERTER_VERSION : 'unknown',
 			'acf_version'        => defined( 'ACF_VERSION' ) ? ACF_VERSION : 'not_installed',
 			'theme'              => get_template(),
 			'memory_limit'       => ini_get( 'memory_limit' ),
@@ -507,7 +507,7 @@ class Error_Handler {
 
 		foreach ( $items as $index => $item ) {
 			try {
-				$progress_tracker->update_progress( $index + 1, sprintf( __( 'Processing item %1$d of %2$d', 'acf-php-json-converter' ), $index + 1, count( $items ) ) );
+				$progress_tracker->update_progress( $index + 1, sprintf( __( 'Processing item %1$d of %2$d', 'field-group-php-json-converter' ), $index + 1, count( $items ) ) );
 
 				$result = call_user_func( $processor, $item, $index, $options );
 
@@ -531,7 +531,7 @@ class Error_Handler {
 			} catch ( Exception $e ) {
 				++$results['processed_items'];
 				++$results['failed_items'];
-				$error_message       = sprintf( __( 'Error processing item %1$d: %2$s', 'acf-php-json-converter' ), $index + 1, $e->getMessage() );
+				$error_message       = sprintf( __( 'Error processing item %1$d: %2$s', 'field-group-php-json-converter' ), $index + 1, $e->getMessage() );
 				$results['errors'][] = $error_message;
 				$this->logger->error(
 					$error_message,
@@ -545,7 +545,7 @@ class Error_Handler {
 			// Check for memory or time limits
 			if ( $this->should_pause_batch_operation() ) {
 				$results['paused']       = true;
-				$results['pause_reason'] = __( 'Operation paused due to resource limits', 'acf-php-json-converter' );
+				$results['pause_reason'] = __( 'Operation paused due to resource limits', 'field-group-php-json-converter' );
 				break;
 			}
 		}
@@ -654,7 +654,7 @@ class Error_Handler {
 				$suggestions[] = array(
 					'type'            => 'pattern',
 					'message'         => sprintf(
-						__( 'Multiple %1$s errors detected (%2$d occurrences). This suggests a systematic issue.', 'acf-php-json-converter' ),
+						__( 'Multiple %1$s errors detected (%2$d occurrences). This suggests a systematic issue.', 'field-group-php-json-converter' ),
 						$error_code,
 						$count
 					),
@@ -667,12 +667,12 @@ class Error_Handler {
 		if ( empty( $suggestions ) && ! empty( $errors ) ) {
 			$suggestions[] = array(
 				'type'            => 'general',
-				'message'         => __( 'Consider the following general troubleshooting steps:', 'acf-php-json-converter' ),
+				'message'         => __( 'Consider the following general troubleshooting steps:', 'field-group-php-json-converter' ),
 				'recommendations' => array(
-					__( 'Check your WordPress and ACF plugin versions are up to date', 'acf-php-json-converter' ),
-					__( 'Verify file permissions in your theme directory', 'acf-php-json-converter' ),
-					__( 'Try processing items individually to isolate problematic field groups', 'acf-php-json-converter' ),
-					__( 'Check the error log for more detailed information', 'acf-php-json-converter' ),
+					__( 'Check your WordPress and ACF plugin versions are up to date', 'field-group-php-json-converter' ),
+					__( 'Verify file permissions in your theme directory', 'field-group-php-json-converter' ),
+					__( 'Try processing items individually to isolate problematic field groups', 'field-group-php-json-converter' ),
+					__( 'Check the error log for more detailed information', 'field-group-php-json-converter' ),
 				),
 			);
 		}
@@ -690,31 +690,31 @@ class Error_Handler {
 	protected function get_pattern_recommendations( $error_code ) {
 		$recommendations = array(
 			'file_not_found'    => array(
-				__( 'Check if theme files have been moved or deleted', 'acf-php-json-converter' ),
-				__( 'Verify the active theme is correctly installed', 'acf-php-json-converter' ),
-				__( 'Perform a fresh theme scan to update file paths', 'acf-php-json-converter' ),
+				__( 'Check if theme files have been moved or deleted', 'field-group-php-json-converter' ),
+				__( 'Verify the active theme is correctly installed', 'field-group-php-json-converter' ),
+				__( 'Perform a fresh theme scan to update file paths', 'field-group-php-json-converter' ),
 			),
 			'permission_denied' => array(
-				__( 'Check file and directory permissions (should be 644 for files, 755 for directories)', 'acf-php-json-converter' ),
-				__( 'Verify your user account has the required WordPress capabilities', 'acf-php-json-converter' ),
-				__( 'Contact your hosting provider if permission issues persist', 'acf-php-json-converter' ),
+				__( 'Check file and directory permissions (should be 644 for files, 755 for directories)', 'field-group-php-json-converter' ),
+				__( 'Verify your user account has the required WordPress capabilities', 'field-group-php-json-converter' ),
+				__( 'Contact your hosting provider if permission issues persist', 'field-group-php-json-converter' ),
 			),
 			'conversion_failed' => array(
-				__( 'Check for unsupported or custom field types in your field groups', 'acf-php-json-converter' ),
-				__( 'Verify ACF field group structure is valid', 'acf-php-json-converter' ),
-				__( 'Update ACF plugin to the latest version', 'acf-php-json-converter' ),
+				__( 'Check for unsupported or custom field types in your field groups', 'field-group-php-json-converter' ),
+				__( 'Verify ACF field group structure is valid', 'field-group-php-json-converter' ),
+				__( 'Update ACF plugin to the latest version', 'field-group-php-json-converter' ),
 			),
 			'memory_limit'      => array(
-				__( 'Process fewer items at once to reduce memory usage', 'acf-php-json-converter' ),
-				__( 'Ask your hosting provider to increase PHP memory limit', 'acf-php-json-converter' ),
-				__( 'Consider upgrading your hosting plan for more resources', 'acf-php-json-converter' ),
+				__( 'Process fewer items at once to reduce memory usage', 'field-group-php-json-converter' ),
+				__( 'Ask your hosting provider to increase PHP memory limit', 'field-group-php-json-converter' ),
+				__( 'Consider upgrading your hosting plan for more resources', 'field-group-php-json-converter' ),
 			),
 		);
 
 		return isset( $recommendations[ $error_code ] ) ? $recommendations[ $error_code ] : array(
-			__( 'Review the specific error details in the log', 'acf-php-json-converter' ),
-			__( 'Try the operation again after addressing any obvious issues', 'acf-php-json-converter' ),
-			__( 'Contact support if the problem persists', 'acf-php-json-converter' ),
+			__( 'Review the specific error details in the log', 'field-group-php-json-converter' ),
+			__( 'Try the operation again after addressing any obvious issues', 'field-group-php-json-converter' ),
+			__( 'Contact support if the problem persists', 'field-group-php-json-converter' ),
 		);
 	}
 }

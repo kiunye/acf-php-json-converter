@@ -3,11 +3,11 @@
  * Progress Tracker Utility.
  *
  * @since      1.0.0
- * @package    ACF_PHP_JSON_Converter
- * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @package    Field_Group_PHP_JSON_Converter
+ * @subpackage Field_Group_PHP_JSON_Converter/Utilities
  */
 
-namespace ACF_PHP_JSON_Converter\Utilities;
+namespace Field_Group_PHP_JSON_Converter\Utilities;
 
 /**
  * Progress Tracker Class.
@@ -131,7 +131,7 @@ class Progress_Tracker {
 		$this->progress_data['start_time'] = microtime( true );
 
 		if ( empty( $initial_message ) ) {
-			$initial_message = sprintf( __( 'Starting %s...', 'acf-php-json-converter' ), $this->operation_name );
+			$initial_message = sprintf( __( 'Starting %s...', 'field-group-php-json-converter' ), $this->operation_name );
 		}
 
 		$this->add_message( $initial_message, 'info' );
@@ -238,9 +238,9 @@ class Progress_Tracker {
 
 		if ( empty( $completion_message ) ) {
 			if ( $success ) {
-				$completion_message = sprintf( __( '%1$s completed successfully in %2$s seconds.', 'acf-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
+				$completion_message = sprintf( __( '%1$s completed successfully in %2$s seconds.', 'field-group-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
 			} else {
-				$completion_message = sprintf( __( '%1$s failed after %2$s seconds.', 'acf-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
+				$completion_message = sprintf( __( '%1$s failed after %2$s seconds.', 'field-group-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
 			}
 		}
 
@@ -273,7 +273,7 @@ class Progress_Tracker {
 		$this->progress_data['execution_time'] = round( $this->progress_data['end_time'] - $this->start_time, 2 );
 
 		if ( empty( $cancellation_message ) ) {
-			$cancellation_message = sprintf( __( '%1$s was cancelled after %2$s seconds.', 'acf-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
+			$cancellation_message = sprintf( __( '%1$s was cancelled after %2$s seconds.', 'field-group-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
 		}
 
 		$this->add_message( $cancellation_message, 'warning' );

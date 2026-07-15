@@ -3,15 +3,15 @@
  * Logger Utility.
  *
  * @since      1.0.0
- * @package    ACF_PHP_JSON_Converter
- * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @package    Field_Group_PHP_JSON_Converter
+ * @subpackage Field_Group_PHP_JSON_Converter/Utilities
  * @author     Your Name <your.email@example.com>
  * @license    GPL-2.0+
  * @link       https://example.com
  * @category   Utilities
  */
 
-namespace ACF_PHP_JSON_Converter\Utilities;
+namespace Field_Group_PHP_JSON_Converter\Utilities;
 
 /**
  * Logger Utility Class.
@@ -19,8 +19,8 @@ namespace ACF_PHP_JSON_Converter\Utilities;
  * Handles logging for the plugin with different log levels,
  * log rotation, log retrieval functionality, and error tracking.
  *
- * @package    ACF_PHP_JSON_Converter
- * @subpackage ACF_PHP_JSON_Converter/Utilities
+ * @package    Field_Group_PHP_JSON_Converter
+ * @subpackage Field_Group_PHP_JSON_Converter/Utilities
  * @author     Your Name <your.email@example.com>
  * @license    GPL-2.0+
  * @link       https://example.com
@@ -94,7 +94,7 @@ class Logger {
 	 * @access   private
 	 * @var      string    $option_name    Option name.
 	 */
-	private $option_name = 'acf_php_json_converter_logs';
+	private $option_name = 'field_group_php_json_converter_logs';
 
 	/**
 	 * Option name for storing error statistics.
@@ -103,7 +103,7 @@ class Logger {
 	 * @access   private
 	 * @var      string    $error_stats_option    Option name for error statistics.
 	 */
-	private $error_stats_option = 'acf_php_json_converter_error_stats';
+	private $error_stats_option = 'field_group_php_json_converter_error_stats';
 
 	/**
 	 * Maximum age of logs in days before cleanup.
@@ -139,12 +139,12 @@ class Logger {
 	 */
 	public function __construct() {
 		// Get log level from settings
-		$settings            = get_option( 'acf_php_json_converter_settings', array() );
+		$settings            = get_option( 'field_group_php_json_converter_settings', array() );
 		$this->current_level = isset( $settings['logging_level'] ) ? $settings['logging_level'] : 'error';
 
 		// Set log file path
 		$upload_dir = wp_upload_dir();
-		$log_dir    = trailingslashit( $upload_dir['basedir'] ) . 'acf-php-json-converter-logs';
+		$log_dir    = trailingslashit( $upload_dir['basedir'] ) . 'field-group-php-json-converter-logs';
 
 		// Create log directory if it doesn't exist
 		if ( ! file_exists( $log_dir ) ) {
@@ -169,17 +169,17 @@ class Logger {
 			}
 		}
 
-		$this->log_file = trailingslashit( $log_dir ) . 'acf-php-json-converter.log';
+		$this->log_file = trailingslashit( $log_dir ) . 'field-group-php-json-converter.log';
 
 		// Apply filters to allow customization of logger settings
-		$this->max_file_size  = apply_filters( 'acf_php_json_converter_max_log_file_size', $this->max_file_size );
-		$this->max_files      = apply_filters( 'acf_php_json_converter_max_log_files', $this->max_files );
-		$this->max_db_entries = apply_filters( 'acf_php_json_converter_max_db_entries', $this->max_db_entries );
-		$this->max_log_age    = apply_filters( 'acf_php_json_converter_max_log_age', $this->max_log_age );
+		$this->max_file_size  = apply_filters( 'field_group_php_json_converter_max_log_file_size', $this->max_file_size );
+		$this->max_files      = apply_filters( 'field_group_php_json_converter_max_log_files', $this->max_files );
+		$this->max_db_entries = apply_filters( 'field_group_php_json_converter_max_db_entries', $this->max_db_entries );
+		$this->max_log_age    = apply_filters( 'field_group_php_json_converter_max_log_age', $this->max_log_age );
 
 		// Schedule log cleanup if not already scheduled
-		if ( ! wp_next_scheduled( 'acf_php_json_converter_log_cleanup' ) ) {
-			wp_schedule_event( time(), 'daily', 'acf_php_json_converter_log_cleanup' );
+		if ( ! wp_next_scheduled( 'field_group_php_json_converter_log_cleanup' ) ) {
+			wp_schedule_event( time(), 'daily', 'field_group_php_json_converter_log_cleanup' );
 		}
 
 		// Initialize error statistics if they don't exist
@@ -437,15 +437,15 @@ class Logger {
 		$log_dir = dirname( $this->log_file );
 
 		// Remove oldest log file if max files reached
-		$oldest_log = trailingslashit( $log_dir ) . 'acf-php-json-converter.' . $this->max_files . '.log';
+		$oldest_log = trailingslashit( $log_dir ) . 'field-group-php-json-converter.' . $this->max_files . '.log';
 		if ( file_exists( $oldest_log ) ) {
 			@unlink( $oldest_log );
 		}
 
 		// Rotate existing log files
 		for ( $i = $this->max_files - 1; $i >= 1; $i-- ) {
-			$old_log = trailingslashit( $log_dir ) . 'acf-php-json-converter.' . $i . '.log';
-			$new_log = trailingslashit( $log_dir ) . 'acf-php-json-converter.' . ( $i + 1 ) . '.log';
+			$old_log = trailingslashit( $log_dir ) . 'field-group-php-json-converter.' . $i . '.log';
+			$new_log = trailingslashit( $log_dir ) . 'field-group-php-json-converter.' . ( $i + 1 ) . '.log';
 
 			if ( file_exists( $old_log ) ) {
 				@rename( $old_log, $new_log );
@@ -453,7 +453,7 @@ class Logger {
 		}
 
 		// Rename current log file
-		$new_log = trailingslashit( $log_dir ) . 'acf-php-json-converter.1.log';
+		$new_log = trailingslashit( $log_dir ) . 'field-group-php-json-converter.1.log';
 		@rename( $this->log_file, $new_log );
 
 		return true;
@@ -507,7 +507,7 @@ class Logger {
 		$log_file = $this->log_file;
 		if ( $file_number > 0 ) {
 			$log_dir  = dirname( $this->log_file );
-			$log_file = trailingslashit( $log_dir ) . 'acf-php-json-converter.' . $file_number . '.log';
+			$log_file = trailingslashit( $log_dir ) . 'field-group-php-json-converter.' . $file_number . '.log';
 		}
 
 		// Check if file exists
@@ -589,7 +589,7 @@ class Logger {
 
 		// Clear rotated log files
 		for ( $i = 1; $i <= $this->max_files; $i++ ) {
-			$log_file = trailingslashit( $log_dir ) . 'acf-php-json-converter.' . $i . '.log';
+			$log_file = trailingslashit( $log_dir ) . 'field-group-php-json-converter.' . $i . '.log';
 			if ( file_exists( $log_file ) ) {
 				@unlink( $log_file );
 			}
@@ -646,10 +646,10 @@ class Logger {
 		$this->current_level = $level;
 
 		// Update settings
-		$settings                  = get_option( 'acf_php_json_converter_settings', array() );
+		$settings                  = get_option( 'field_group_php_json_converter_settings', array() );
 		$settings['logging_level'] = $level;
 
-		return update_option( 'acf_php_json_converter_settings', $settings );
+		return update_option( 'field_group_php_json_converter_settings', $settings );
 	}
 
 	/**
@@ -869,7 +869,7 @@ class Logger {
 		$log_file = $this->log_file;
 		if ( $file_number > 0 ) {
 			$log_dir  = dirname( $this->log_file );
-			$log_file = trailingslashit( $log_dir ) . 'acf-php-json-converter.' . $file_number . '.log';
+			$log_file = trailingslashit( $log_dir ) . 'field-group-php-json-converter.' . $file_number . '.log';
 		}
 
 		// Check if file exists

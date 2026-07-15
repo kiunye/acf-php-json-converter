@@ -1,4 +1,4 @@
-=== ACF PHP-to-JSON Converter ===
+=== Field Group PHP-JSON Converter ===
 Contributors: kiunye
 Tags: acf, advanced custom fields, local json, converter, developer tools
 Requires at least: 6.5
@@ -7,13 +7,13 @@ Requires PHP: 8.0
 Stable tag: 1.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-Donate link: https://github.com/kiunye/acf-php-json-converter
+Donate link: https://github.com/kiunye/field-group-php-json-converter
 
 Scans your active theme for Advanced Custom Fields groups registered in PHP and converts them to ACF Local JSON (and back again), including nested repeaters, flexible content, and clone fields.
 
 == Description ==
 
-ACF PHP-to-JSON Converter helps developers move ACF field groups between PHP (registered in a theme) and the JSON format used by ACF's Local JSON feature.
+Field Group PHP-JSON Converter helps developers move ACF field groups between PHP (registered in a theme) and the JSON format used by ACF's Local JSON feature.
 
 = What it does =
 
@@ -30,7 +30,7 @@ This is a developer utility. It follows native wp-admin design and supports only
 
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/acf-php-json-converter/`.
+1. Upload the plugin files to `/wp-content/plugins/field-group-php-json-converter/`.
 2. Activate the plugin through the 'Plugins' menu in WordPress (ACF must be active).
 3. Go to Tools > ACF PHP-JSON Converter.
 

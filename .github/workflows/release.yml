@@ -24,7 +24,7 @@ jobs:
 
       - name: Prepare release directory
         run: |
-          mkdir -p release/acf-php-json-converter
+          mkdir -p release/field-group-php-json-converter
           rsync -a --delete \
             --exclude="release" \
             --exclude=".git" \
@@ -34,15 +34,15 @@ jobs:
             --exclude="phpcs.xml" \
             --exclude=".phpunit.result.cache" \
             --exclude=".phpunit.cache" \
-            ./ release/acf-php-json-converter/
+            ./ release/field-group-php-json-converter/
 
       - name: Build zip
         run: |
           cd release
-          zip -r "acf-php-json-converter-${GITHUB_REF_NAME}.zip" acf-php-json-converter
+          zip -r "field-group-php-json-converter-${GITHUB_REF_NAME}.zip" field-group-php-json-converter
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/acf-php-json-converter-${{ github.ref_name }}.zip
+          files: release/field-group-php-json-converter-${{ github.ref_name }}.zip
 
