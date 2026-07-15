@@ -1,0 +1,30 @@
+{
+    "key": "group_json_fixture",
+    "title": "JSON Fixture Group",
+    "fields": [
+        {
+            "key": "field_json_text",
+            "label": "Text",
+            "name": "json_text",
+            "type": "text"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "page"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "",
+    "modified": 1690000000
+}
