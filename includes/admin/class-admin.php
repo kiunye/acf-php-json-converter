@@ -161,43 +161,62 @@ class Admin {
 				</div>
 			<?php endif; ?>
 
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="fgpjc-form">
-				<?php wp_nonce_field( self::ACTION ); ?>
-				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>">
+			<div class="fgpjc-grid">
+				<section class="fgpjc-section" aria-labelledby="fgpjc-convert-heading">
+					<h2 id="fgpjc-convert-heading"><?php echo esc_html__( 'Convert', 'field-group-php-json-converter' ); ?></h2>
 
-				<fieldset class="fgpjc-mode">
-					<label>
-						<input type="radio" name="mode" value="php_to_json" <?php checked( $mode, 'php_to_json' ); ?>>
-						<?php echo esc_html__( 'PHP &rarr; JSON', 'field-group-php-json-converter' ); ?>
-					</label>
-					<label>
-						<input type="radio" name="mode" value="json_to_php" <?php checked( $mode, 'json_to_php' ); ?>>
-						<?php echo esc_html__( 'JSON &rarr; PHP', 'field-group-php-json-converter' ); ?>
-					</label>
-				</fieldset>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="fgpjc-form">
+						<?php wp_nonce_field( self::ACTION ); ?>
+						<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>">
 
-				<p>
-					<label for="fgpjc-input"><?php echo esc_html__( 'Source', 'field-group-php-json-converter' ); ?></label>
-					<textarea id="fgpjc-input" name="source" class="fgpjc-input" spellcheck="false" placeholder="<?php echo esc_attr__( 'Paste ACF PHP or JSON here…', 'field-group-php-json-converter' ); ?>"><?php echo esc_textarea( $input ); ?></textarea>
-				</p>
+						<fieldset class="fgpjc-mode">
+							<legend><?php echo esc_html__( 'Conversion direction', 'field-group-php-json-converter' ); ?></legend>
+							<label>
+								<input type="radio" name="mode" value="php_to_json" <?php checked( $mode, 'php_to_json' ); ?>>
+								<?php echo esc_html__( 'PHP &rarr; JSON', 'field-group-php-json-converter' ); ?>
+							</label>
+							<label>
+								<input type="radio" name="mode" value="json_to_php" <?php checked( $mode, 'json_to_php' ); ?>>
+								<?php echo esc_html__( 'JSON &rarr; PHP', 'field-group-php-json-converter' ); ?>
+							</label>
+						</fieldset>
 
-				<p class="fgpjc-actions">
-					<button type="submit" class="button button-primary"><?php echo esc_html__( 'Convert', 'field-group-php-json-converter' ); ?></button>
-					<button type="button" class="button fgpjc-copy" data-target="fgpjc-output"><?php echo esc_html__( 'Copy output', 'field-group-php-json-converter' ); ?></button>
-				</p>
+						<p>
+							<label for="fgpjc-input"><?php echo esc_html__( 'Source', 'field-group-php-json-converter' ); ?></label>
+							<textarea id="fgpjc-input" name="source" class="fgpjc-input" spellcheck="false" placeholder="<?php echo esc_attr__( 'Paste ACF PHP or JSON here…', 'field-group-php-json-converter' ); ?>"><?php echo esc_textarea( $input ); ?></textarea>
+						</p>
 
-				<p>
-					<label for="fgpjc-output"><?php echo esc_html__( 'Output', 'field-group-php-json-converter' ); ?></label>
-					<textarea id="fgpjc-output" name="output" class="fgpjc-output" spellcheck="false" readonly><?php echo esc_textarea( $output ); ?></textarea>
-				</p>
-			</form>
+						<p class="fgpjc-actions">
+							<button type="submit" class="button button-primary"><?php echo esc_html__( 'Convert', 'field-group-php-json-converter' ); ?></button>
+							<button type="button" class="button fgpjc-copy" data-target="fgpjc-output"><?php echo esc_html__( 'Copy output', 'field-group-php-json-converter' ); ?></button>
+						</p>
 
-			<?php if ( $has_acf ) : ?>
-				<hr>
-				<h2><?php echo esc_html__( 'Bulk export ACF field groups', 'field-group-php-json-converter' ); ?></h2>
-				<p><?php echo esc_html__( 'Export every ACF field group currently registered or saved in the database to a single JSON file.', 'field-group-php-json-converter' ); ?></p>
-				<button type="button" class="button" id="fgpjc-bulk-export"><?php echo esc_html__( 'Export all field groups', 'field-group-php-json-converter' ); ?></button>
-			<?php endif; ?>
+						<p>
+							<label for="fgpjc-output"><?php echo esc_html__( 'Output', 'field-group-php-json-converter' ); ?></label>
+							<textarea id="fgpjc-output" name="output" class="fgpjc-output" spellcheck="false" readonly aria-describedby="fgpjc-convert-status"><?php echo esc_textarea( $output ); ?></textarea>
+						</p>
+
+						<p id="fgpjc-convert-status" class="fgpjc-status" role="status" aria-live="polite"></p>
+					</form>
+				</section>
+
+				<?php if ( $has_acf ) : ?>
+					<section class="fgpjc-section" aria-labelledby="fgpjc-acf-heading">
+						<h2 id="fgpjc-acf-heading"><?php echo esc_html__( 'ACF field groups', 'field-group-php-json-converter' ); ?></h2>
+						<p><?php echo esc_html__( 'Export every ACF field group currently registered or saved in the database to a single JSON file, or import a JSON file to generate PHP registration code.', 'field-group-php-json-converter' ); ?></p>
+
+						<p class="fgpjc-actions">
+							<button type="button" class="button" id="fgpjc-bulk-export"><?php echo esc_html__( 'Export all field groups', 'field-group-php-json-converter' ); ?></button>
+							<label class="button">
+								<?php echo esc_html__( 'Import JSON file', 'field-group-php-json-converter' ); ?>
+								<input type="file" id="fgpjc-import-file" accept=".json,application/json" class="fgpjc-import-input">
+							</label>
+						</p>
+
+						<p id="fgpjc-export-status" class="fgpjc-status" role="status" aria-live="polite"></p>
+					</section>
+				<?php endif; ?>
+			</div>
 		</div>
 		<?php
 	}

@@ -1,0 +1,13 @@
+{
+	"name": "field-group-php-json-converter-assets",
+	"version": "2.0.0",
+	"private": true,
+	"description": "Build tooling for the converter admin JavaScript.",
+	"scripts": {
+		"build": "esbuild assets/js/src/admin.js --bundle --outfile=assets/js/admin.js --format=iife",
+		"watch": "esbuild assets/js/src/admin.js --bundle --outfile=assets/js/admin.js --format=iife --watch"
+	},
+	"devDependencies": {
+		"esbuild": "^0.21.0"
+	}
+}
