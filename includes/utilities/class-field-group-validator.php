@@ -107,7 +107,7 @@ class Field_Group_Validator {
 				return $result;
 			}
 			$groups = is_array( $decoded ) ? $decoded : array();
-			if ( ! empty( $groups ) && ! array_is_list( $groups ) ) {
+			if ( ! empty( $groups ) && ! $this->is_list( $groups ) ) {
 				// A single group object rather than a list of them.
 				$groups = array( $groups );
 			}
@@ -406,5 +406,34 @@ class Field_Group_Validator {
 				);
 			}
 		}
+	}
+
+	/**
+	 * Detect whether an array is a list (sequential integer keys from 0).
+	 *
+	 * Polyfill for array_is_list(), which is only available in PHP 8.1+.
+	 *
+	 * @since 2.0.0
+	 * @param array $items Array to inspect.
+	 * @return bool
+	 */
+	private function is_list( array $items ): bool {
+		if ( function_exists( 'array_is_list' ) ) {
+			return array_is_list( $items );
+		}
+
+		if ( array() === $items ) {
+			return true;
+		}
+
+		$expected = 0;
+		foreach ( $items as $key => $value ) {
+			if ( $key !== $expected ) {
+				return false;
+			}
+			++$expected;
+		}
+
+		return true;
 	}
 }
