@@ -1,0 +1,365 @@
+# Copyright (C) 2026 Chris Araya
+# This file is distributed under the GPL-2.0+.
+msgid ""
+msgstr ""
+"Project-Id-Version: Field Group PHP-JSON Converter 2.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/field-group-php-json-converter\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-16T11:02:43+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.11.0\n"
+"X-Domain: field-group-php-json-converter\n"
+
+#. Plugin Name of the plugin
+#: field-group-php-json-converter.php
+msgid "Field Group PHP-JSON Converter"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: field-group-php-json-converter.php
+msgid "https://github.com/kiunye/field-group-php-json-converter"
+msgstr ""
+
+#. Description of the plugin
+#: field-group-php-json-converter.php
+msgid "Automatically scans theme files for ACF field groups defined"
+msgstr ""
+
+#. Author of the plugin
+#: field-group-php-json-converter.php
+msgid "Chris Araya"
+msgstr ""
+
+#. Author URI of the plugin
+#: field-group-php-json-converter.php
+msgid "https://github.com/kiunye"
+msgstr ""
+
+#: includes/admin/class-admin.php:78
+#: includes/admin/class-admin.php:79
+msgid "Field Group Converter"
+msgstr ""
+
+#: includes/admin/class-admin.php:138
+msgid "You are not allowed to view this page."
+msgstr ""
+
+#: includes/admin/class-admin.php:152
+msgid "Field Group PHP &harr; JSON Converter"
+msgstr ""
+
+#: includes/admin/class-admin.php:166
+#: includes/admin/class-admin.php:190
+msgid "Convert"
+msgstr ""
+
+#: includes/admin/class-admin.php:173
+msgid "Conversion direction"
+msgstr ""
+
+#: includes/admin/class-admin.php:176
+msgid "PHP &rarr; JSON"
+msgstr ""
+
+#: includes/admin/class-admin.php:180
+msgid "JSON &rarr; PHP"
+msgstr ""
+
+#: includes/admin/class-admin.php:185
+msgid "Source"
+msgstr ""
+
+#: includes/admin/class-admin.php:186
+msgid "Paste ACF PHP or JSON here…"
+msgstr ""
+
+#: includes/admin/class-admin.php:191
+msgid "Copy output"
+msgstr ""
+
+#: includes/admin/class-admin.php:195
+msgid "Output"
+msgstr ""
+
+#: includes/admin/class-admin.php:205
+msgid "ACF field groups"
+msgstr ""
+
+#: includes/admin/class-admin.php:206
+msgid "Export every ACF field group currently registered or saved in the database to a single JSON file, or import a JSON file to generate PHP registration code."
+msgstr ""
+
+#: includes/admin/class-admin.php:209
+msgid "Export all field groups"
+msgstr ""
+
+#: includes/admin/class-admin.php:211
+msgid "Import JSON file"
+msgstr ""
+
+#: includes/admin/class-admin.php:232
+#: includes/admin/class-admin.php:265
+#: includes/admin/class-admin.php:292
+msgid "Invalid request."
+msgstr ""
+
+#: includes/admin/class-admin.php:296
+msgid "ACF is not active."
+msgstr ""
+
+#: includes/class-activator.php:68
+msgid "Field Group PHP-JSON Converter requires PHP 8.0 or higher. Please upgrade your PHP version."
+msgstr ""
+
+#: includes/class-activator.php:83
+msgid "Field Group PHP-JSON Converter requires WordPress 6.5 or higher. Please upgrade your WordPress installation."
+msgstr ""
+
+#: includes/rest/class-rest-controller.php:108
+msgid "You are not allowed to perform conversions."
+msgstr ""
+
+#: includes/rest/class-rest-controller.php:129
+#: includes/rest/class-rest-controller.php:157
+msgid "The \"source\" parameter is required."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:202
+msgid "The requested file could not be found. Please check the file path and try again."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:203
+msgid "You do not have permission to perform this action. Please contact your administrator."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:204
+msgid "The JSON format is invalid. Please check your JSON syntax and try again."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:205
+msgid "The PHP code contains syntax errors. Please review and correct the code."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:206
+msgid "The conversion process failed. This may be due to unsupported field types or corrupted data."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:207
+msgid "Unable to write the file. Please check file permissions and available disk space."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:208
+msgid "Failed to create backup. The operation was cancelled to prevent data loss."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:209
+msgid "Theme scanning failed. This may be due to file permission issues or corrupted theme files."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:210
+msgid "Advanced Custom Fields plugin is not active. Please activate ACF to use this converter."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:211
+msgid "The active theme could not be found. Please check your WordPress installation."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:212
+msgid "The operation exceeded available memory. Try processing fewer items at once."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:213
+msgid "The operation timed out. Try processing fewer items or increase the server timeout limit."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:214
+msgid "A network error occurred. Please check your internet connection and try again."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:215
+msgid "A database error occurred. Please try again or contact support if the problem persists."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:233
+msgid "Check File Path"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:238
+msgid "Refresh Scan"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:245
+#: includes/utilities/class-error-handler.php:281
+msgid "Check Permissions"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:250
+msgid "Contact Administrator"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:257
+msgid "Validate JSON"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:262
+msgid "Use Sample JSON"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:269
+msgid "Try Individual Conversion"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:274
+msgid "Check Field Types"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:286
+msgid "Download Instead"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:293
+msgid "Process Fewer Items"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:298
+msgid "Increase Memory Limit"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:300
+msgid "Contact your host to increase PHP memory limit."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:316
+msgid "Try Again"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:321
+msgid "Contact Support"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:323
+msgid "Contact support if the problem persists."
+msgstr ""
+
+#. translators: %1$d: current item number, %2$d: total item count.
+#: includes/utilities/class-error-handler.php:511
+msgid "Processing item %1$d of %2$d"
+msgstr ""
+
+#. translators: %1$d: item number, %2$s: error message.
+#: includes/utilities/class-error-handler.php:536
+msgid "Error processing item %1$d: %2$s"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:550
+msgid "Operation paused due to resource limits"
+msgstr ""
+
+#. translators: %1$s: error code, %2$d: occurrence count.
+#: includes/utilities/class-error-handler.php:660
+msgid "Multiple %1$s errors detected (%2$d occurrences). This suggests a systematic issue."
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:673
+msgid "Consider the following general troubleshooting steps:"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:675
+msgid "Check your WordPress and ACF plugin versions are up to date"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:676
+msgid "Verify file permissions in your theme directory"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:677
+msgid "Try processing items individually to isolate problematic field groups"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:678
+msgid "Check the error log for more detailed information"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:696
+msgid "Check if theme files have been moved or deleted"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:697
+msgid "Verify the active theme is correctly installed"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:698
+msgid "Perform a fresh theme scan to update file paths"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:701
+msgid "Check file and directory permissions (should be 644 for files, 755 for directories)"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:702
+msgid "Verify your user account has the required WordPress capabilities"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:703
+msgid "Contact your hosting provider if permission issues persist"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:706
+msgid "Check for unsupported or custom field types in your field groups"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:707
+msgid "Verify ACF field group structure is valid"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:708
+msgid "Update ACF plugin to the latest version"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:711
+msgid "Process fewer items at once to reduce memory usage"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:712
+msgid "Ask your hosting provider to increase PHP memory limit"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:713
+msgid "Consider upgrading your hosting plan for more resources"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:718
+msgid "Review the specific error details in the log"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:719
+msgid "Try the operation again after addressing any obvious issues"
+msgstr ""
+
+#: includes/utilities/class-error-handler.php:720
+msgid "Contact support if the problem persists"
+msgstr ""
+
+#. translators: %s: operation name.
+#: includes/utilities/class-progress-tracker.php:135
+msgid "Starting %s..."
+msgstr ""
+
+#. translators: %1$s: operation name, %2$s: elapsed seconds.
+#: includes/utilities/class-progress-tracker.php:243
+msgid "%1$s completed successfully in %2$s seconds."
+msgstr ""
+
+#. translators: %1$s: operation name, %2$s: elapsed seconds.
+#: includes/utilities/class-progress-tracker.php:246
+msgid "%1$s failed after %2$s seconds."
+msgstr ""
+
+#. translators: %1$s: operation name, %2$s: elapsed seconds.
+#: includes/utilities/class-progress-tracker.php:280
+msgid "%1$s was cancelled after %2$s seconds."
+msgstr ""

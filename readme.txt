@@ -4,25 +4,25 @@ Tags: acf, advanced custom fields, local json, converter, developer tools
 Requires at least: 6.5
 Tested up to: 6.6
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 2.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://github.com/kiunye/field-group-php-json-converter
 
-Scans your active theme for Advanced Custom Fields groups registered in PHP and converts them to ACF Local JSON (and back again), including nested repeaters, flexible content, and clone fields.
+Convert ACF field groups between PHP and JSON, in both directions, with lossless handling of nested repeaters, flexible content, and clone fields.
 
 == Description ==
 
-Field Group PHP-JSON Converter helps developers move ACF field groups between PHP (registered in a theme) and the JSON format used by ACF's Local JSON feature.
+Field Group PHP-JSON Converter helps developers move ACF field groups between PHP registration code and the JSON format used by ACF's Local JSON feature.
 
 = What it does =
 
-* Recursively scans the parent and child theme for `acf_add_local_field_group()` (and equivalent) calls.
-* Converts PHP field groups to Local JSON, and JSON back to PHP, with no loss of structure or nesting.
+* Converts pasted PHP field-group code to Local JSON, and JSON back to PHP, with no loss of structure or nesting.
 * Handles repeaters, flexible content layouts, clone fields, and arbitrary sub-field nesting.
-* Batch conversion with progress tracking, and a preview before anything is written.
-* Automatic backups before any file on disk is modified.
-* Export as an individual file download or a ZIP archive.
+* A live converter in the admin (Tools &rarr; Field Group Converter) with copy-to-clipboard.
+* A REST API (`/field-group-php-json-converter/v1/php-to-json` and `/json-to-php`) for headless and automation use.
+* Bulk export of every ACF field group to a single JSON file, and import of a JSON file to generate PHP registration code.
+* The parsing layer is built on PHP's tokenizer with no bundled third-party libraries, so nothing extra is shipped with the plugin.
 
 = Scope =
 
@@ -46,14 +46,17 @@ All standard ACF field types, including repeaters, flexible content, groups, and
 
 == Screenshots ==
 
-1. Scan results listing field groups found in the active theme.
-2. Converting a field group to Local JSON.
+1. The converter tool: paste PHP or JSON, pick a direction, and convert live with copy-to-clipboard.
+2. Bulk export and import of ACF field groups.
 
 == Changelog ==
 
-= 1.2.0 =
+= 2.0.0 =
 
-* v2 rewrite in progress: tokenizer-based PHP parsing and REST-based backend.
+* Clean rewrite with a tokenizer-based PHP parser and a REST-based backend.
+* Live converter in the admin with copy-to-clipboard.
+* REST API endpoints for headless conversion.
+* Bulk export and import of ACF field groups.
 
 = 1.0.1 =
 

@@ -297,7 +297,7 @@ class Error_Handler {
 				array(
 					'label'       => __( 'Increase Memory Limit', 'field-group-php-json-converter' ),
 					'action'      => 'increase_memory',
-					'description' => __( 'Contact your host to increase PHP memory limit.' ),
+					'description' => __( 'Contact your host to increase PHP memory limit.', 'field-group-php-json-converter' ),
 				),
 			),
 		);
@@ -320,7 +320,7 @@ class Error_Handler {
 				array(
 					'label'       => __( 'Contact Support', 'field-group-php-json-converter' ),
 					'action'      => 'contact_support',
-					'description' => __( 'Contact support if the problem persists.' ),
+					'description' => __( 'Contact support if the problem persists.', 'field-group-php-json-converter' ),
 				),
 			);
 		}
@@ -507,6 +507,7 @@ class Error_Handler {
 
 		foreach ( $items as $index => $item ) {
 			try {
+				// translators: %1$d: current item number, %2$d: total item count.
 				$progress_tracker->update_progress( $index + 1, sprintf( __( 'Processing item %1$d of %2$d', 'field-group-php-json-converter' ), $index + 1, count( $items ) ) );
 
 				$result = call_user_func( $processor, $item, $index, $options );
@@ -531,6 +532,7 @@ class Error_Handler {
 			} catch ( Exception $e ) {
 				++$results['processed_items'];
 				++$results['failed_items'];
+				// translators: %1$d: item number, %2$s: error message.
 				$error_message       = sprintf( __( 'Error processing item %1$d: %2$s', 'field-group-php-json-converter' ), $index + 1, $e->getMessage() );
 				$results['errors'][] = $error_message;
 				$this->logger->error(
@@ -654,6 +656,7 @@ class Error_Handler {
 				$suggestions[] = array(
 					'type'            => 'pattern',
 					'message'         => sprintf(
+						// translators: %1$s: error code, %2$d: occurrence count.
 						__( 'Multiple %1$s errors detected (%2$d occurrences). This suggests a systematic issue.', 'field-group-php-json-converter' ),
 						$error_code,
 						$count
