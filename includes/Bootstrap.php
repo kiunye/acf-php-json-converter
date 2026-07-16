@@ -49,6 +49,12 @@ final class Bootstrap {
 	 * @return void
 	 */
 	public function init(): void {
+		load_plugin_textdomain(
+			'field-group-php-json-converter',
+			false,
+			dirname( plugin_basename( __FILE__ ) ) . '/languages'
+		);
+
 		$rest = new \Field_Group_PHP_JSON_Converter\Rest\Rest_Controller();
 		add_action( 'rest_api_init', array( $rest, 'register_routes' ) );
 

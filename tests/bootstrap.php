@@ -108,6 +108,21 @@ if ( ! function_exists( 'is_admin' ) ) {
 	}
 }
 
+if ( ! function_exists( 'load_plugin_textdomain' ) ) {
+	function load_plugin_textdomain( $domain, $deprecated = false, $plugin_rel_path = false ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$GLOBALS['fgc_textdomain'] = $domain;
+		return true;
+	}
+}
+
+if ( ! function_exists( 'plugin_basename' ) ) {
+	function plugin_basename( $file ) {
+		$file = str_replace( '\\', '/', $file );
+		$parts = explode( '/', $file );
+		return end( $parts );
+	}
+}
+
 if ( ! function_exists( 'add_menu_page' ) ) {
 	$GLOBALS['fgc_menu_pages'] = array();
 	function add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $callback = '', $icon_url = '', $position = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable

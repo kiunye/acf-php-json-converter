@@ -33,6 +33,7 @@
         "lint:fix": "phpcbf field-group-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/autoload.php includes/parsers includes/converters includes/backup includes/services includes/rest includes/admin includes/utilities",
         "test": "phpunit --configuration phpunit.xml",
         "test:unit": "phpunit --configuration phpunit.xml",
-        "build:js": "npm run build"
+        "build:js": "npm run build",
+        "make-pot": "wp i18n make-pot . languages/field-group-php-json-converter.pot --slug=field-group-php-json-converter --domain=field-group-php-json-converter"
     }
 }

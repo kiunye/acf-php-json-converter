@@ -131,6 +131,7 @@ class Progress_Tracker {
 		$this->progress_data['start_time'] = microtime( true );
 
 		if ( empty( $initial_message ) ) {
+			// translators: %s: operation name.
 			$initial_message = sprintf( __( 'Starting %s...', 'field-group-php-json-converter' ), $this->operation_name );
 		}
 
@@ -238,8 +239,10 @@ class Progress_Tracker {
 
 		if ( empty( $completion_message ) ) {
 			if ( $success ) {
+				// translators: %1$s: operation name, %2$s: elapsed seconds.
 				$completion_message = sprintf( __( '%1$s completed successfully in %2$s seconds.', 'field-group-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
 			} else {
+				// translators: %1$s: operation name, %2$s: elapsed seconds.
 				$completion_message = sprintf( __( '%1$s failed after %2$s seconds.', 'field-group-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
 			}
 		}
@@ -273,6 +276,7 @@ class Progress_Tracker {
 		$this->progress_data['execution_time'] = round( $this->progress_data['end_time'] - $this->start_time, 2 );
 
 		if ( empty( $cancellation_message ) ) {
+			// translators: %1$s: operation name, %2$s: elapsed seconds.
 			$cancellation_message = sprintf( __( '%1$s was cancelled after %2$s seconds.', 'field-group-php-json-converter' ), $this->operation_name, $this->progress_data['execution_time'] );
 		}
 
