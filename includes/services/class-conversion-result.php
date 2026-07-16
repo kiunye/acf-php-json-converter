@@ -34,12 +34,20 @@ class Conversion_Result {
 	private array $written = array();
 
 	/**
-	 * Human readable error messages.
+	 * Error messages.
 	 *
 	 * @since 2.0.0
 	 * @var array<int,string>
 	 */
 	private array $errors = array();
+
+	/**
+	 * Non-blocking notices (e.g. groups skipped because they are dynamic).
+	 *
+	 * @since 2.0.0
+	 * @var array<int,string>
+	 */
+	private array $notices = array();
 
 	/**
 	 * Set the in-memory converted output.
@@ -112,5 +120,46 @@ class Conversion_Result {
 	 */
 	public function get_errors(): array {
 		return $this->errors;
+	}
+
+	/**
+	 * Record a non-blocking notice.
+	 *
+	 * @since 2.0.0
+	 * @param string $message Notice text.
+	 * @return void
+	 */
+	public function add_notice( string $message ): void {
+		$this->notices[] = $message;
+	}
+
+	/**
+	 * Non-blocking notices recorded during the conversion.
+	 *
+	 * @since 2.0.0
+	 * @return array<int,string>
+	 */
+	public function get_notices(): array {
+		return $this->notices;
+	}
+
+	/**
+	 * Whether any notices were recorded.
+	 *
+	 * @since 2.0.0
+	 * @return bool
+	 */
+	public function has_notices(): bool {
+		return count( $this->notices ) > 0;
+	}
+
+	/**
+	 * Whether any errors were recorded.
+	 *
+	 * @since 2.0.0
+	 * @return bool
+	 */
+	public function has_errors(): bool {
+		return count( $this->errors ) > 0;
 	}
 }

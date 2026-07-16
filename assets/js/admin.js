@@ -133,6 +133,7 @@
     const $status = $("#fgpjc-scan-status");
     const $results = $("#fgpjc-scan-results");
     const $list = $results.find("ul");
+    const $notices = $("#fgpjc-scan-notices");
     function announce(message, isError) {
       $status.text(message);
       $status.attr("role", isError ? "alert" : "status");
@@ -142,6 +143,7 @@
       announce("");
       $results.prop("hidden", true);
       $list.empty();
+      $notices.prop("hidden", true).empty();
       post(config.themeAction, { theme_action: "scan", _wpnonce: config.themeNonce }).then((response) => {
         if (!response.success || !response.data) {
           announce("Scan failed.", true);
@@ -150,17 +152,24 @@
         const groups = response.data.groups || [];
         if (groups.length === 0) {
           announce("No field groups found in the active theme.");
-          return;
+        } else {
+          groups.forEach((group) => {
+            const label = group.title || group.key || "(unnamed)";
+            const source = "json" === group.source ? "Local JSON" : "PHP";
+            $list.append(
+              $("<li>").text(label + " \u2014 " + source)
+            );
+          });
+          $results.prop("hidden", false);
+          announce(groups.length + " field group(s) found.");
         }
-        groups.forEach((group) => {
-          const label = group.title || group.key || "(unnamed)";
-          const source = "json" === group.source ? "Local JSON" : "PHP";
-          $list.append(
-            $("<li>").text(label + " \u2014 " + source)
-          );
-        });
-        $results.prop("hidden", false);
-        announce(groups.length + " field group(s) found.");
+        const notices = response.data.notices || [];
+        if (notices.length > 0) {
+          notices.forEach((note) => {
+            $notices.append($("<li>").text(note));
+          });
+          $notices.prop("hidden", false);
+        }
       }).catch(() => announce("Scan request failed.", true)).always(() => $button.prop("disabled", false));
     });
   }

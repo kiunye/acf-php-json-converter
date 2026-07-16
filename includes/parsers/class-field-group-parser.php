@@ -366,6 +366,13 @@ class Field_Group_Parser {
 			}
 
 			$id = $tok[0];
+			if ( defined( 'T_CURLY_OPEN' ) && constant( 'T_CURLY_OPEN' ) === $id ) {
+				// String interpolation "{$x}" opens a brace that is closed by a
+				// literal "}" char token; count it as an open so depth balances.
+				++$depth;
+				continue;
+			}
+
 			if ( ( defined( 'T_ERROR' ) && constant( 'T_ERROR' ) === $id ) || ( defined( 'T_BAD_CHARACTER' ) && constant( 'T_BAD_CHARACTER' ) === $id ) ) {
 				$result->add_error(
 					new Parser_Error(

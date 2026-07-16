@@ -112,4 +112,61 @@ class ThemeScannerTest extends TestCase {
 
 		$this->assertTrue( $found_php );
 	}
+
+	/**
+	 * Groups built from variables are reported as non-blocking notices, not
+	 * hard errors, and string interpolation must not trigger false syntax
+	 * errors.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_dynamic_groups_become_notices(): void {
+		$GLOBALS['fgc_theme_dirs'] = array( $this->theme );
+
+		$php = "<?php\n"
+			. "acf_add_local_field_group( array(\n"
+			. "\t'key' => 'group_literal',\n"
+			. "\t'title' => 'Literal',\n"
+			. ") );\n"
+			. "\$dynamic = array( 'key' => 'group_dyn', 'title' => 'Dynamic' );\n"
+			. "acf_add_local_field_group( \$dynamic );\n"
+			. '\$message = "Hello {$user->name}, you have {count} messages";' . "\n";
+		file_put_contents( $this->theme . '/fields.php', $php );
+
+		$scanner = new Theme_Scanner();
+		$result  = $scanner->scan();
+
+		$this->assertFalse( $result->has_errors(), 'String interpolation should not produce syntax errors.' );
+
+		$php_count = 0;
+		foreach ( $result->get_groups() as $item ) {
+			if ( 'php' === $item['source'] ) {
+				++$php_count;
+			}
+		}
+		$this->assertSame( 1, $php_count, 'Only the literal PHP group should be parsed; the dynamic one is skipped.' );
+		$this->assertTrue( $result->has_notices(), 'The dynamic group should be reported as a notice.' );
+		foreach ( $result->get_notices() as $notice ) {
+			$this->assertStringContainsString( 'dynamically', $notice );
+		}
+	}
+
+	/**
+	 * A genuine unbalanced-file still surfaces as a syntax error.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_real_syntax_error_surfaces(): void {
+		$GLOBALS['fgc_theme_dirs'] = array( $this->theme );
+
+		$php = "<?php\nfunction broken() { echo 'unterminated;\n";
+		file_put_contents( $this->theme . '/fields.php', $php );
+
+		$scanner = new Theme_Scanner();
+		$result  = $scanner->scan();
+
+		$this->assertTrue( $result->has_errors() );
+	}
 }

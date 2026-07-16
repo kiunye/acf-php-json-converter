@@ -37,6 +37,15 @@ class Scan_Result {
 	private array $errors = array();
 
 	/**
+	 * Non-blocking notices (e.g. groups that were skipped because they are
+	 * built dynamically and cannot be parsed statically).
+	 *
+	 * @since 2.0.0
+	 * @var array<int,string>
+	 */
+	private array $notices = array();
+
+	/**
 	 * Record a discovered field group.
 	 *
 	 * @since 2.0.0
@@ -62,6 +71,17 @@ class Scan_Result {
 	 */
 	public function add_error( string $message ): void {
 		$this->errors[] = $message;
+	}
+
+	/**
+	 * Record a non-blocking notice.
+	 *
+	 * @since 2.0.0
+	 * @param string $message Notice text.
+	 * @return void
+	 */
+	public function add_notice( string $message ): void {
+		$this->notices[] = $message;
 	}
 
 	/**
@@ -112,5 +132,25 @@ class Scan_Result {
 	 */
 	public function has_errors(): bool {
 		return count( $this->errors ) > 0;
+	}
+
+	/**
+	 * Non-blocking notices recorded during the scan.
+	 *
+	 * @since 2.0.0
+	 * @return array<int,string>
+	 */
+	public function get_notices(): array {
+		return $this->notices;
+	}
+
+	/**
+	 * Whether any notices were recorded.
+	 *
+	 * @since 2.0.0
+	 * @return bool
+	 */
+	public function has_notices(): bool {
+		return count( $this->notices ) > 0;
 	}
 }

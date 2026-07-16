@@ -120,6 +120,10 @@ class Theme_Service {
 			$result->add_error( $error );
 		}
 
+		foreach ( $scan->get_notices() as $notice ) {
+			$result->add_notice( $notice );
+		}
+
 		$written = 0;
 		foreach ( $scan->get_groups() as $item ) {
 			if ( 'php' !== $item['source'] ) {
@@ -160,6 +164,10 @@ class Theme_Service {
 
 		foreach ( $scan->get_errors() as $error ) {
 			$result->add_error( $error );
+		}
+
+		foreach ( $scan->get_notices() as $notice ) {
+			$result->add_notice( $notice );
 		}
 
 		$groups = array();

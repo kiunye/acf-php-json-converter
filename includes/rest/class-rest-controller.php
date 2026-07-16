@@ -243,6 +243,7 @@ class Rest_Controller {
 				'success' => $scan->has_groups() || ! $scan->has_errors(),
 				'groups'  => $groups,
 				'errors'  => $scan->get_errors(),
+				'notices' => $scan->get_notices(),
 			),
 			200
 		);
@@ -260,6 +261,7 @@ class Rest_Controller {
 			'success' => $result->is_success(),
 			'paths'   => $result->get_written_paths(),
 			'errors'  => $result->get_errors(),
+			'notices' => $result->get_notices(),
 		);
 
 		return new WP_REST_Response( $payload, $result->is_success() ? 200 : 422 );
@@ -277,6 +279,7 @@ class Rest_Controller {
 			'success' => $result->is_success(),
 			'output'  => $result->get_output(),
 			'errors'  => $result->get_errors(),
+			'notices' => $result->get_notices(),
 		);
 
 		return new WP_REST_Response( $payload, $result->is_success() ? 200 : 422 );

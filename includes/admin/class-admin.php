@@ -303,6 +303,11 @@ class Admin {
 						<h3><?php echo esc_html__( 'Discovered field groups', 'field-group-php-json-converter' ); ?></h3>
 						<ul></ul>
 					</div>
+
+					<div id="fgpjc-scan-notices" class="fgpjc-scan-notices notice notice-info" hidden>
+						<p><strong><?php echo esc_html__( 'Skipped groups', 'field-group-php-json-converter' ); ?></strong></p>
+						<ul></ul>
+					</div>
 				</section>
 			</div>
 		</div>
@@ -449,6 +454,7 @@ class Admin {
 				'output'    => $output,
 				'message'   => $message,
 				'errors'    => $result->get_errors(),
+				'notices'   => $result->get_notices(),
 			),
 			60
 		);
@@ -484,8 +490,9 @@ class Admin {
 			}
 			return wp_send_json_success(
 				array(
-					'groups' => $groups,
-					'errors' => $scan->get_errors(),
+					'groups'  => $groups,
+					'errors'  => $scan->get_errors(),
+					'notices' => $scan->get_notices(),
 				)
 			);
 		}
@@ -497,6 +504,7 @@ class Admin {
 					'success' => $result->is_success(),
 					'output'  => $result->get_output(),
 					'errors'  => $result->get_errors(),
+					'notices' => $result->get_notices(),
 				)
 			);
 		}
@@ -507,6 +515,7 @@ class Admin {
 				'success' => $result->is_success(),
 				'paths'   => $result->get_written_paths(),
 				'errors'  => $result->get_errors(),
+				'notices' => $result->get_notices(),
 			)
 		);
 	}

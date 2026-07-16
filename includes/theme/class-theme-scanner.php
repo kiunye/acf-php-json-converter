@@ -87,7 +87,14 @@ class Theme_Scanner {
 
 				$parsed = $this->parser->parse_file( $file );
 				foreach ( $parsed->get_errors() as $error ) {
-					$result->add_error( $error->get_message() );
+					$code = $error->get_code();
+					if ( 'syntax_error' === $code || 'unreadable_file' === $code ) {
+						$result->add_error( $error->get_message() );
+					} else {
+						// Dynamic or otherwise non-literal groups are skipped, not
+						// treated as hard failures of the scan.
+						$result->add_notice( $error->get_message() );
+					}
 				}
 
 				foreach ( $parsed->get_field_groups() as $group ) {
