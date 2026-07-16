@@ -1,0 +1,31 @@
+.fgpjc-wrap {
+	max-width: 960px;
+}
+
+.fgpjc-mode {
+	margin: 1em 0;
+}
+
+.fgpjc-mode label {
+	margin-right: 1.5em;
+	font-weight: 600;
+}
+
+.fgpjc-input,
+.fgpjc-output {
+	width: 100%;
+	min-height: 260px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 13px;
+	line-height: 1.5;
+	white-space: pre;
+	overflow: auto;
+}
+
+.fgpjc-actions {
+	margin: 1em 0;
+}
+
+.fgpjc-actions .button {
+	margin-right: 0.5em;
+}
