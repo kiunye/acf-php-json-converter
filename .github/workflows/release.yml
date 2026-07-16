@@ -8,8 +8,6 @@ on:
 jobs:
   build_zip:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
@@ -43,8 +41,9 @@ jobs:
           cd release
           zip -r "field-group-php-json-converter-${GITHUB_REF_NAME}.zip" field-group-php-json-converter
 
-      - name: GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload plugin zip
+        uses: actions/upload-artifact@v4
         with:
-          files: release/field-group-php-json-converter-${{ github.ref_name }}.zip
-
+          name: field-group-php-json-converter-${{ github.ref_name }}
+          path: release/field-group-php-json-converter-${{ github.ref_name }}.zip
+          if-no-files-found: error
