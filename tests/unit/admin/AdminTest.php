@@ -154,4 +154,26 @@ class AdminTest extends TestCase {
 		$this->assertSame( 1, $response['data']['count'] );
 		$this->assertStringContainsString( 'group_one', $response['data']['json'] );
 	}
+
+	/**
+	 * The rendered page exposes aria-live regions for assistive technology.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_render_page_includes_aria_live_regions(): void {
+		$GLOBALS['fgc_acf_active'] = true;
+		$GLOBALS['fgc_acf_groups']  = array( array( 'key' => 'group_one' ) );
+		$GLOBALS['fgc_transients']  = array();
+
+		$admin = new Admin( new Field_Group_Conversion_Service() );
+		ob_start();
+		$admin->render_page();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( 'aria-live="polite"', $html );
+		$this->assertStringContainsString( 'id="fgpjc-convert-status"', $html );
+		$this->assertStringContainsString( 'id="fgpjc-export-status"', $html );
+		$this->assertStringContainsString( 'id="fgpjc-import-file"', $html );
+	}
 }

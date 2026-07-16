@@ -32,6 +32,7 @@
         "lint": "phpcs field-group-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/autoload.php includes/parsers includes/converters includes/backup includes/services includes/rest includes/admin includes/utilities",
         "lint:fix": "phpcbf field-group-php-json-converter.php uninstall.php includes/Bootstrap.php includes/class-activator.php includes/class-deactivator.php includes/autoload.php includes/parsers includes/converters includes/backup includes/services includes/rest includes/admin includes/utilities",
         "test": "phpunit --configuration phpunit.xml",
-        "test:unit": "phpunit --configuration phpunit.xml"
+        "test:unit": "phpunit --configuration phpunit.xml",
+        "build:js": "npm run build"
     }
 }
