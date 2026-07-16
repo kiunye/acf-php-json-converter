@@ -152,6 +152,60 @@ class FieldGroupParserTest extends TestCase {
 	}
 
 	/**
+	 * array_merge() of literal arrays is folded into a single resolvable group.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_resolves_array_merge_of_literals(): void {
+		$result = ( new Field_Group_Parser() )->parse_file( $this->fixtures . 'array-merge.php' );
+
+		$this->assertTrue( $result->is_success() );
+		$this->assertSame( 1, $result->get_field_group_count() );
+
+		$group = $result->get_field_groups()[0];
+		$this->assertSame( 'group_merged', $group['key'] );
+		$this->assertSame( 'Merged Group', $group['title'] );
+		$this->assertArrayHasKey( 'location', $group );
+		$this->assertTrue( $group['active'] );
+	}
+
+	/**
+	 * Nested array_merge() calls are resolved recursively.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_resolves_nested_array_merge(): void {
+		$result = ( new Field_Group_Parser() )->parse_file( $this->fixtures . 'array-merge-nested.php' );
+
+		$this->assertTrue( $result->is_success() );
+		$this->assertSame( 1, $result->get_field_group_count() );
+
+		$group = $result->get_field_groups()[0];
+		$this->assertSame( 'group_nested', $group['key'] );
+		$this->assertSame( 'Nested', $group['title'] );
+	}
+
+	/**
+	 * array_merge() containing a non-literal (variable) argument cannot be
+	 * resolved and is reported as a dynamic group.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_array_merge_with_variable_is_dynamic(): void {
+		$source = "<?php\n"
+			. "\$base = array( 'key' => 'group_dyn' );\n"
+			. "acf_add_local_field_group( array_merge( \$base, array( 'title' => 'T' ) ) );\n";
+		$result = ( new Field_Group_Parser() )->parse_source( $source );
+
+		$this->assertFalse( $result->is_success() );
+		$this->assertSame( 0, $result->get_field_group_count() );
+		$this->assertSame( 'dynamic_group', $result->get_errors()[0]->get_code() );
+	}
+
+	/**
 	 * A syntactically broken file must surface a syntax error, never a partial group.
 	 *
 	 * @since 2.0.0

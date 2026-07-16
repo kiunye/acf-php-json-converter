@@ -252,6 +252,13 @@ class Field_Group_Parser {
 				$reader->next();
 				return null;
 			}
+
+			$reader->next();
+			$reader->skip_whitespace_and_comments();
+			if ( $reader->is_char( '(' ) ) {
+				return $this->parse_call( $tok[1], $reader );
+			}
+
 			throw new Parser_Exception( $reader->current_line(), 'Unresolvable constant "' . $tok[1] . '" in field group definition.' );
 		}
 
@@ -309,6 +316,93 @@ class Field_Group_Parser {
 			}
 
 			throw new Parser_Exception( $reader->current_line(), 'Unexpected token in array definition.' );
+		}
+	}
+
+	/**
+	 * Resolve a limited set of static function calls encountered as values.
+	 *
+	 * Only array merging helpers (array_merge / array_merge_recursive) are
+	 * supported; they fold their literal array arguments into a single array.
+	 * Any other call is treated as a dynamic expression and rejected.
+	 *
+	 * @since 2.0.0
+	 * @param string       $name   Function name from the token stream.
+	 * @param Token_Reader $reader Reader positioned at the opening "(".
+	 * @return mixed
+	 * @throws Parser_Exception When the call cannot be resolved statically.
+	 */
+	private function parse_call( string $name, Token_Reader $reader ): mixed {
+		$lower = strtolower( $name );
+
+		if ( 'array_merge' !== $lower && 'array_merge_recursive' !== $lower ) {
+			throw new Parser_Exception( $reader->current_line(), 'Unsupported function "' . $name . '" in field group definition.' );
+		}
+
+		$reader->next();
+		$args      = $this->parse_argument_list( $reader, ')' );
+		$merged    = array();
+		$recursive = 'array_merge_recursive' === $lower;
+
+		foreach ( $args as $arg ) {
+			if ( ! is_array( $arg ) ) {
+				throw new Parser_Exception(
+					$reader->current_line(),
+					'Argument passed to ' . $name . '() must be a literal array to be parsed statically.'
+				);
+			}
+			if ( $recursive ) {
+				$merged = array_merge_recursive( $merged, $arg );
+			} else {
+				$merged = array_merge( $merged, $arg );
+			}
+		}
+
+		return $merged;
+	}
+
+	/**
+	 * Parse a comma separated argument list until the given closing character.
+	 *
+	 * @since 2.0.0
+	 * @param Token_Reader $reader Token reader positioned after the opening "(".
+	 * @param string       $close  Closing character of the call.
+	 * @return array<int,mixed>
+	 * @throws Parser_Exception When the list is malformed or unterminated.
+	 */
+	private function parse_argument_list( Token_Reader $reader, string $close ): array {
+		$args = array();
+
+		while ( true ) {
+			$reader->skip_whitespace_and_comments();
+
+			if ( $reader->at_end() ) {
+				throw new Parser_Exception( $reader->current_line(), 'Unterminated argument list in field group definition.' );
+			}
+
+			if ( $reader->is_char( $close ) ) {
+				$reader->next();
+				return $args;
+			}
+
+			$args[] = $this->parse_value( $reader );
+
+			$reader->skip_whitespace_and_comments();
+			if ( $reader->at_end() ) {
+				throw new Parser_Exception( $reader->current_line(), 'Unterminated argument list in field group definition.' );
+			}
+
+			if ( $reader->is_char( ',' ) ) {
+				$reader->next();
+				continue;
+			}
+
+			if ( $reader->is_char( $close ) ) {
+				$reader->next();
+				return $args;
+			}
+
+			throw new Parser_Exception( $reader->current_line(), 'Unexpected token in argument list.' );
 		}
 	}
 
