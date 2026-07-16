@@ -43,13 +43,18 @@ final class Bootstrap {
 	/**
 	 * Initialize plugin runtime.
 	 *
-	 * The Phase 0 foundation contains only the compliance scaffolding
-	 * (activation/deactivation, uninstall, and the shared utility classes).
-	 * Feature wiring is added in later phases.
+	 * Wires the REST API controller (always available to authenticated
+	 * clients) and the admin UI (only inside the WordPress admin).
 	 *
 	 * @return void
 	 */
 	public function init(): void {
-		// Intentional no-op for the Phase 0 compliance baseline.
+		$rest = new \Field_Group_PHP_JSON_Converter\Rest\Rest_Controller();
+		add_action( 'rest_api_init', array( $rest, 'register_routes' ) );
+
+		if ( is_admin() ) {
+			$admin = new \Field_Group_PHP_JSON_Converter\Admin\Admin();
+			$admin->register_hooks();
+		}
 	}
 }

@@ -5,7 +5,7 @@
  * Description: Automatically scans theme files for ACF field groups defined
  * in PHP and converts them to JSON format for easy import/export and
  * synchronization.
- * Version: 1.2.0
+ * Version: 2.0.0
  * Author: Chris Araya
  * Author URI: https://github.com/kiunye
  * License: GPL-2.0+
@@ -41,7 +41,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'FIELD_GROUP_PHP_JSON_CONVERTER_VERSION', '1.2.0' );
+define( 'FIELD_GROUP_PHP_JSON_CONVERTER_VERSION', '2.0.0' );
 
 /**
  * Plugin base directory path.
