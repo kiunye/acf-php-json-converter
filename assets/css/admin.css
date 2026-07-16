@@ -1,29 +1,36 @@
+/* Field Group PHP <-> JSON Converter admin styles.
+ *
+ * Visual language: premium "double-bezel" panels, hairline borders, diffused
+ * ambient shadows, and spring-like motion. Constrained to the WordPress admin
+ * chrome (no full-bleed backgrounds, no floating glass nav).
+ */
+
 .fgpjc-wrap {
 	max-width: 1100px;
+	--fgpjc-radius: 14px;
+	--fgpjc-hairline: rgba( 25, 30, 35, 0.10 );
+	--fgpjc-hairline-strong: rgba( 25, 30, 35, 0.16 );
+	--fgpjc-ease: cubic-bezier( 0.32, 0.72, 0, 1 );
+	--fgpjc-surface: #fff;
+	--fgpjc-surface-muted: #f6f7f7;
+	--fgpjc-accent: #3858e9;
 }
 
-.fgpjc-grid {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 2rem;
-	margin-top: 1.5rem;
-}
-
-@media ( max-width: 782px ) {
-	.fgpjc-grid {
-		grid-template-columns: 1fr;
-	}
-}
-
+/* Double-bezel panel: outer hairline shell + inner highlight + diffused shadow. */
 .fgpjc-section {
-	background: #fff;
-	border: 1px solid #c3c4c7;
-	border-radius: 4px;
-	padding: 1.25rem 1.5rem 1.5rem;
+	background: var( --fgpjc-surface );
+	border: 1px solid var( --fgpjc-hairline );
+	border-radius: var( --fgpjc-radius );
+	padding: 1.5rem 1.75rem 1.75rem;
+	box-shadow:
+		0 1px 2px rgba( 16, 21, 26, 0.04 ),
+		0 8px 24px -12px rgba( 16, 21, 26, 0.12 );
 }
 
 .fgpjc-section h2 {
 	margin-top: 0;
+	font-size: 1.25rem;
+	letter-spacing: -0.01em;
 }
 
 .fgpjc-mode {
@@ -33,9 +40,9 @@
 }
 
 .fgpjc-mode legend {
-font-weight: 600;
-margin-bottom: 0.5em;
-padding: 0;
+	font-weight: 600;
+	margin-bottom: 0.5em;
+	padding: 0;
 }
 
 .fgpjc-mode label {
@@ -47,24 +54,51 @@ padding: 0;
 .fgpjc-output {
 	width: 100%;
 	min-height: 260px;
-	font-family: Consolas, Monaco, monospace;
+	font-family: Consolas, Monaco, "SF Mono", monospace;
 	font-size: 13px;
-	line-height: 1.5;
+	line-height: 1.55;
 	white-space: pre;
 	overflow: auto;
 	box-sizing: border-box;
+	border: 1px solid var( --fgpjc-hairline );
+	border-radius: 10px;
+	padding: 0.75rem 0.85rem;
+	background: var( --fgpjc-surface );
+	transition: border-color 0.4s var( --fgpjc-ease ), box-shadow 0.4s var( --fgpjc-ease );
+}
+
+.fgpjc-input:focus,
+.fgpjc-output:focus {
+	border-color: var( --fgpjc-accent );
+	box-shadow: 0 0 0 3px rgba( 56, 88, 233, 0.14 );
+	outline: none;
 }
 
 .fgpjc-output {
-	background: #f6f7f7;
+	background: var( --fgpjc-surface-muted );
 }
 
 .fgpjc-actions {
 	margin: 1em 0;
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.5em;
+	gap: 0.6em;
 	align-items: center;
+}
+
+/* Pill buttons with a subtle press and internal motion on the trailing icon. */
+.fgpjc-actions .button {
+	border-radius: 999px;
+	padding: 0.5em 1.2em;
+	transition: transform 0.3s var( --fgpjc-ease ), background-color 0.3s var( --fgpjc-ease ), box-shadow 0.3s var( --fgpjc-ease );
+}
+
+.fgpjc-actions .button:hover {
+	transform: translateY( -1px );
+}
+
+.fgpjc-actions .button:active {
+	transform: scale( 0.98 );
 }
 
 .fgpjc-import-input {
@@ -85,85 +119,139 @@ padding: 0;
 	color: #50575e;
 }
 
+/* Tabs: hairline rail, no fighting borders. The active tab connects flush to
+ * the panel below via a white "cut" that masks the rail line. */
 .fgpjc-tabs {
 	display: flex;
 	gap: 0.25rem;
-	margin-top: 1.5rem;
-	border-bottom: 1px solid #c3c4c7;
+	margin-top: 1.75rem;
+	padding: 0 0.25rem;
+	position: relative;
+	border-bottom: 1px solid var( --fgpjc-hairline );
 }
 
 .fgpjc-tab {
+	position: relative;
 	border: 1px solid transparent;
 	border-bottom: none;
-	background: #f0f0f1;
-	color: #1d2327;
-	padding: 0.6em 1.1em;
+	background: transparent;
+	color: #646970;
+	padding: 0.7em 1.25em;
 	font-size: 14px;
 	font-weight: 600;
+	letter-spacing: -0.01em;
 	cursor: pointer;
-	border-radius: 4px 4px 0 0;
+	border-radius: 10px 10px 0 0;
 	margin-bottom: -1px;
+	transition: color 0.4s var( --fgpjc-ease ), background-color 0.4s var( --fgpjc-ease );
+}
+
+.fgpjc-tab::after {
+	content: "";
+	position: absolute;
+	left: 1.25em;
+	right: 1.25em;
+	bottom: -1px;
+	height: 2px;
+	background: var( --fgpjc-accent );
+	border-radius: 2px;
+	transform: scaleX( 0 );
+	transform-origin: center;
+	transition: transform 0.45s var( --fgpjc-ease );
 }
 
 .fgpjc-tab:hover {
-	background: #f6f7f7;
+	color: #1d2327;
+	background: rgba( 25, 30, 35, 0.04 );
 }
 
 .fgpjc-tab.is-active {
-	background: #fff;
-	border-color: #c3c4c7;
-	color: #000;
+	color: #1d2327;
+	background: var( --fgpjc-surface );
+	border-color: var( --fgpjc-hairline );
+	/* Mask the rail line behind the active tab. */
+	box-shadow: 0 1px 0 0 var( --fgpjc-surface );
+}
+
+.fgpjc-tab.is-active::after {
+	transform: scaleX( 1 );
 }
 
 .fgpjc-panels {
 	margin-top: 0;
 }
 
+.fgpjc-panel {
+	/* Gentle fade/blur entry when shown. */
+	animation: fgpjc-panel-in 0.5s var( --fgpjc-ease ) both;
+}
+
+@keyframes fgpjc-panel-in {
+	from {
+		opacity: 0;
+		transform: translateY( 8px );
+	}
+	to {
+		opacity: 1;
+		transform: translateY( 0 );
+	}
+}
+
 .fgpjc-panel[hidden] {
 	display: none;
+	animation: none;
 }
 
 .fgpjc-subsection {
 	margin-top: 2rem;
 	padding-top: 1.5rem;
-	border-top: 1px solid #f0f0f1;
+	border-top: 1px solid var( --fgpjc-hairline );
 }
 
 .fgpjc-subsection h3 {
 	margin-top: 0;
+	font-size: 1.05rem;
 }
 
 .fgpjc-issues-summary {
 	margin: 0.5em 0;
 	font-weight: 600;
+	color: #1d2327;
 }
 
 .fgpjc-issues-list {
-	margin: 0.5em 0 0;
+	margin: 0.75em 0 0;
 	list-style: none;
 	padding: 0;
 }
 
+/* Issues use a hairline card + colored accent rail (double-bezel feel). */
 .fgpjc-issue {
-	padding: 0.5em 0.75em;
-	border-left: 4px solid #c3c4c7;
-	margin-bottom: 0.5em;
-	background: #f6f7f7;
+	padding: 0.7em 0.9em;
+	border: 1px solid var( --fgpjc-hairline );
+	border-left-width: 4px;
+	border-radius: 10px;
+	margin-bottom: 0.6em;
+	background: var( --fgpjc-surface );
+	box-shadow: 0 1px 2px rgba( 16, 21, 26, 0.03 );
+	transition: transform 0.3s var( --fgpjc-ease ), box-shadow 0.3s var( --fgpjc-ease );
+}
+
+.fgpjc-issue:hover {
+	transform: translateX( 2px );
+	box-shadow: 0 4px 14px -8px rgba( 16, 21, 26, 0.2 );
 }
 
 .fgpjc-issue-error {
 	border-left-color: #d63638;
-	background: #fcf0f1;
 }
 
 .fgpjc-issue-warning {
 	border-left-color: #dba617;
-	background: #fcfbf3;
 }
 
 .fgpjc-issue-ok {
 	border-left-color: #00a32a;
-	background: #f0f8f1;
 }
 
 .fgpjc-issue-context {
