@@ -10,6 +10,7 @@
 namespace Field_Group_PHP_JSON_Converter\Admin;
 
 use Field_Group_PHP_JSON_Converter\Services\Field_Group_Conversion_Service;
+use Field_Group_PHP_JSON_Converter\Theme\Theme_Service;
 
 /**
  * Registers the settings/tool page and the conversion handlers used by the
@@ -36,6 +37,14 @@ class Admin {
 	public const ACTION = 'fgpjc_convert';
 
 	/**
+	 * Action used for the theme scan and theme convert operations.
+	 *
+	 * @since 2.0.0
+	 * @var string
+	 */
+	public const THEME_ACTION = 'fgpjc_theme';
+
+	/**
 	 * Conversion orchestration service.
 	 *
 	 * @since 2.0.0
@@ -44,13 +53,26 @@ class Admin {
 	private Field_Group_Conversion_Service $service;
 
 	/**
+	 * Theme scanning / conversion service.
+	 *
+	 * @since 2.0.0
+	 * @var Theme_Service
+	 */
+	private Theme_Service $theme_service;
+
+	/**
 	 * Inject the conversion service.
 	 *
 	 * @since 2.0.0
 	 * @param Field_Group_Conversion_Service|null $service Conversion service.
+	 * @param Theme_Service|null                  $theme_service Theme service.
 	 */
-	public function __construct( ?Field_Group_Conversion_Service $service = null ) {
-		$this->service = $service ?? new Field_Group_Conversion_Service();
+	public function __construct(
+		?Field_Group_Conversion_Service $service = null,
+		?Theme_Service $theme_service = null
+	) {
+		$this->service       = $service ?? new Field_Group_Conversion_Service();
+		$this->theme_service = $theme_service ?? new Theme_Service();
 	}
 
 	/**
@@ -65,6 +87,8 @@ class Admin {
 		add_action( 'admin_post_' . self::ACTION, array( $this, 'handle_post_convert' ) );
 		add_action( 'wp_ajax_' . self::ACTION, array( $this, 'handle_ajax_convert' ) );
 		add_action( 'wp_ajax_fgpjc_bulk_export', array( $this, 'handle_bulk_export' ) );
+		add_action( 'admin_post_' . self::THEME_ACTION, array( $this, 'handle_post_theme' ) );
+		add_action( 'wp_ajax_' . self::THEME_ACTION, array( $this, 'handle_ajax_theme' ) );
 	}
 
 	/**
@@ -120,9 +144,11 @@ class Admin {
 			'fgpjc-admin',
 			'fgpjcAdmin',
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'action'  => self::ACTION,
-				'nonce'   => wp_create_nonce( self::ACTION ),
+				'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+				'action'      => self::ACTION,
+				'nonce'       => wp_create_nonce( self::ACTION ),
+				'themeAction' => self::THEME_ACTION,
+				'themeNonce'  => wp_create_nonce( self::THEME_ACTION ),
 			)
 		);
 	}
@@ -145,7 +171,14 @@ class Admin {
 		$mode    = is_array( $result ) && isset( $result['mode'] ) ? $result['mode'] : 'php_to_json';
 		$has_acf = $this->acf_available();
 
+		$theme_result    = get_transient( 'fgpjc_theme_result' );
+		$theme_output    = is_array( $theme_result ) && isset( $theme_result['output'] ) ? $theme_result['output'] : '';
+		$theme_message   = is_array( $theme_result ) && isset( $theme_result['message'] ) ? $theme_result['message'] : '';
+		$theme_errors    = is_array( $theme_result ) && isset( $theme_result['errors'] ) ? $theme_result['errors'] : array();
+		$theme_direction = is_array( $theme_result ) && isset( $theme_result['direction'] ) ? $theme_result['direction'] : 'php_to_json';
+
 		delete_transient( 'fgpjc_convert_result' );
+		delete_transient( 'fgpjc_theme_result' );
 
 		?>
 		<div class="wrap fgpjc-wrap">
@@ -216,6 +249,61 @@ class Admin {
 						<p id="fgpjc-export-status" class="fgpjc-status" role="status" aria-live="polite"></p>
 					</section>
 				<?php endif; ?>
+
+				<section class="fgpjc-section" aria-labelledby="fgpjc-theme-heading">
+					<h2 id="fgpjc-theme-heading"><?php echo esc_html__( 'Scan active theme', 'field-group-php-json-converter' ); ?></h2>
+					<p><?php echo esc_html__( 'Discover every ACF field group the active theme registers in PHP or stores as Local JSON, then convert between the two formats.', 'field-group-php-json-converter' ); ?></p>
+
+					<?php if ( ! empty( $theme_errors ) ) : ?>
+						<div class="notice notice-error">
+							<ul>
+								<?php foreach ( $theme_errors as $error ) : ?>
+									<li><?php echo esc_html( $error ); ?></li>
+								<?php endforeach; ?>
+							</ul>
+						</div>
+					<?php endif; ?>
+
+					<?php if ( '' !== $theme_message ) : ?>
+						<div class="notice notice-success"><p><?php echo esc_html( $theme_message ); ?></p></div>
+					<?php endif; ?>
+
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="fgpjc-form">
+						<?php wp_nonce_field( self::THEME_ACTION ); ?>
+						<input type="hidden" name="action" value="<?php echo esc_attr( self::THEME_ACTION ); ?>">
+
+						<fieldset class="fgpjc-mode">
+							<legend><?php echo esc_html__( 'Conversion direction', 'field-group-php-json-converter' ); ?></legend>
+							<label>
+								<input type="radio" name="direction" value="php_to_json" <?php checked( $theme_direction, 'php_to_json' ); ?>>
+								<?php echo esc_html__( 'PHP &rarr; Local JSON (write to theme acf-json folder)', 'field-group-php-json-converter' ); ?>
+							</label>
+							<label>
+								<input type="radio" name="direction" value="json_to_php" <?php checked( $theme_direction, 'json_to_php' ); ?>>
+								<?php echo esc_html__( 'Local JSON &rarr; PHP (functions.php code)', 'field-group-php-json-converter' ); ?>
+							</label>
+						</fieldset>
+
+						<p class="fgpjc-actions">
+							<button type="button" class="button" id="fgpjc-scan"><?php echo esc_html__( 'Scan theme', 'field-group-php-json-converter' ); ?></button>
+							<button type="submit" class="button button-primary"><?php echo esc_html__( 'Convert discovered groups', 'field-group-php-json-converter' ); ?></button>
+						</p>
+
+						<?php if ( '' !== $theme_output ) : ?>
+							<p>
+								<label for="fgpjc-theme-output"><?php echo esc_html__( 'Result', 'field-group-php-json-converter' ); ?></label>
+								<textarea id="fgpjc-theme-output" class="fgpjc-output" spellcheck="false" readonly><?php echo esc_textarea( $theme_output ); ?></textarea>
+							</p>
+						<?php endif; ?>
+
+						<p id="fgpjc-scan-status" class="fgpjc-status" role="status" aria-live="polite"></p>
+					</form>
+
+					<div id="fgpjc-scan-results" class="fgpjc-scan-results" hidden>
+						<h3><?php echo esc_html__( 'Discovered field groups', 'field-group-php-json-converter' ); ?></h3>
+						<ul></ul>
+					</div>
+				</section>
 			</div>
 		</div>
 		<?php
@@ -321,6 +409,120 @@ class Admin {
 	 */
 	private function acf_available(): bool {
 		return function_exists( 'acf_get_field_groups' ) && post_type_exists( 'acf-field-group' );
+	}
+
+	/**
+	 * Handle the server-rendered theme convert form (admin-post).
+	 *
+	 * Direction "php_to_json" writes discovered PHP groups into the theme's
+	 * Local JSON folder. Direction "json_to_php" produces functions.php code
+	 * for discovered Local JSON groups.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function handle_post_theme(): void {
+		if ( ! $this->verify_theme_request() ) {
+			wp_die( esc_html__( 'Invalid request.', 'field-group-php-json-converter' ) );
+		}
+
+		$direction = isset( $_POST['direction'] ) ? sanitize_key( wp_unslash( $_POST['direction'] ) ) : 'php_to_json'; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		if ( 'json_to_php' === $direction ) {
+			$result  = $this->theme_service->convert_json_groups_to_php_code();
+			$output  = $result->get_output();
+			$message = $result->is_success()
+				? __( 'PHP registration code generated. Paste this into your theme\'s functions.php.', 'field-group-php-json-converter' )
+				: __( 'No Local JSON groups were converted.', 'field-group-php-json-converter' );
+		} else {
+			$result  = $this->theme_service->export_php_groups_to_local_json();
+			$output  = implode( "\n", $result->get_written_paths() );
+			$message = $result->is_success()
+				? __( 'PHP field groups were written to the theme\'s acf-json folder.', 'field-group-php-json-converter' )
+				: __( 'No PHP field groups were written.', 'field-group-php-json-converter' );
+		}
+
+		set_transient(
+			'fgpjc_theme_result',
+			array(
+				'direction' => $direction,
+				'output'    => $output,
+				'message'   => $message,
+				'errors'    => $result->get_errors(),
+			),
+			60
+		);
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
+		return; // phpcs:ignore Squiz.PHP.NonExecutableCode.ReturnNotRequired
+	}
+
+	/**
+	 * Handle the AJAX theme scan/convert request used by the page script.
+	 *
+	 * @since 2.0.0
+	 * @return array
+	 */
+	public function handle_ajax_theme(): array {
+		if ( ! $this->verify_theme_request() ) {
+			return wp_send_json_error( array( 'message' => __( 'Invalid request.', 'field-group-php-json-converter' ) ), 403 );
+		}
+
+		$action = isset( $_POST['theme_action'] ) ? sanitize_key( wp_unslash( $_POST['theme_action'] ) ) : 'scan'; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		if ( 'scan' === $action ) {
+			$scan   = $this->theme_service->scan_theme();
+			$groups = array();
+			foreach ( $scan->get_groups() as $item ) {
+				$group    = $item['group'];
+				$groups[] = array(
+					'title'  => $group['title'] ?? '',
+					'key'    => $group['key'] ?? '',
+					'source' => $item['source'],
+					'file'   => $item['file'],
+				);
+			}
+			return wp_send_json_success(
+				array(
+					'groups' => $groups,
+					'errors' => $scan->get_errors(),
+				)
+			);
+		}
+
+		if ( 'json_to_php' === $action ) {
+			$result = $this->theme_service->convert_json_groups_to_php_code();
+			return wp_send_json_success(
+				array(
+					'success' => $result->is_success(),
+					'output'  => $result->get_output(),
+					'errors'  => $result->get_errors(),
+				)
+			);
+		}
+
+		$result = $this->theme_service->export_php_groups_to_local_json();
+		return wp_send_json_success(
+			array(
+				'success' => $result->is_success(),
+				'paths'   => $result->get_written_paths(),
+				'errors'  => $result->get_errors(),
+			)
+		);
+	}
+
+	/**
+	 * Verify a theme request's nonce and capability.
+	 *
+	 * @since 2.0.0
+	 * @return bool
+	 */
+	private function verify_theme_request(): bool {
+		if ( ! check_ajax_referer( self::THEME_ACTION, '_wpnonce', false ) ) {
+			return false;
+		}
+
+		return current_user_can( 'manage_options' );
 	}
 
 	/**

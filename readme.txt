@@ -17,10 +17,13 @@ Field Group PHP-JSON Converter helps developers move ACF field groups between PH
 
 = What it does =
 
+* Scans the active theme (parent and child) for ACF field groups registered in PHP via `acf_add_local_field_group()`, and for field groups stored as ACF Local JSON.
+* Converts a PHP-registered group into Local JSON and writes it straight into the theme's `acf-json` folder (backing up any file it overwrites).
+* Converts Local JSON field groups into PHP registration code ready to paste into the theme's `functions.php`.
 * Converts pasted PHP field-group code to Local JSON, and JSON back to PHP, with no loss of structure or nesting.
 * Handles repeaters, flexible content layouts, clone fields, and arbitrary sub-field nesting.
 * A live converter in the admin (Tools &rarr; Field Group Converter) with copy-to-clipboard.
-* A REST API (`/field-group-php-json-converter/v1/php-to-json` and `/json-to-php`) for headless and automation use.
+* A REST API (`/field-group-php-json-converter/v1/scan-theme`, `/theme-to-json`, `/theme-to-php`, `/php-to-json` and `/json-to-php`) for headless and automation use.
 * Bulk export of every ACF field group to a single JSON file, and import of a JSON file to generate PHP registration code.
 * The parsing layer is built on PHP's tokenizer with no bundled third-party libraries, so nothing extra is shipped with the plugin.
 
