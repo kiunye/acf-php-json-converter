@@ -289,3 +289,42 @@ if ( ! function_exists( 'wp_nonce_field' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_stylesheet_directory' ) ) {
+	$GLOBALS['fgc_theme_dirs'] = array( sys_get_temp_dir() . '/fgpjc-theme' );
+	function get_stylesheet_directory() {
+		return $GLOBALS['fgc_theme_dirs'][0];
+	}
+}
+
+if ( ! function_exists( 'get_template_directory' ) ) {
+	function get_template_directory() {
+		$dirs = $GLOBALS['fgc_theme_dirs'] ?? array( sys_get_temp_dir() . '/fgpjc-theme' );
+		return $dirs[0];
+	}
+}
+
+if ( ! function_exists( 'is_child_theme' ) ) {
+	$GLOBALS['fgc_is_child_theme'] = false;
+	function is_child_theme() {
+		return $GLOBALS['fgc_is_child_theme'];
+	}
+}
+
+if ( ! function_exists( 'wp_normalize_path' ) ) {
+	function wp_normalize_path( $path ) {
+		return str_replace( '\\', '/', $path );
+	}
+}
+
+if ( ! function_exists( 'trailingslashit' ) ) {
+	function trailingslashit( $path ) {
+		return rtrim( $path, '/\\' ) . '/';
+	}
+}
+
+if ( ! function_exists( 'apply_filters' ) ) {
+	function apply_filters( $tag, $value = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		return $value;
+	}
+}
+

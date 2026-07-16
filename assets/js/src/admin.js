@@ -5,8 +5,10 @@
  */
 import { initConverter } from './modules/converter.js';
 import { initAcfGroups } from './modules/acf-groups.js';
+import { initTheme } from './modules/theme.js';
 
 window.jQuery( function ( $ ) {
 	initConverter( $ );
 	initAcfGroups( $ );
+	initTheme( $ );
 } );
