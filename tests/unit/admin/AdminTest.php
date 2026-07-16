@@ -176,4 +176,31 @@ class AdminTest extends TestCase {
 		$this->assertStringContainsString( 'id="fgpjc-export-status"', $html );
 		$this->assertStringContainsString( 'id="fgpjc-import-file"', $html );
 	}
+
+	/**
+	 * The issues handler aggregates environment, snippet, theme and DB checks.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function test_ajax_issues_aggregates_results(): void {
+		$_POST['_wpnonce'] = 'nonce';
+		$_POST['source']   = '<?php acf_add_local_field_group( array( "title" => "No Key" ) );';
+		$_POST['format']   = 'php';
+
+		$dir = sys_get_temp_dir() . '/fgpjc-issues-' . uniqid();
+		mkdir( $dir, 0777, true );
+		file_put_contents( $dir . '/functions.php', '<?php acf_add_local_field_group( array( "title" => "Missing Key" ) );' );
+		$GLOBALS['fgc_theme_dirs'] = array( $dir );
+
+		( new Admin( new Field_Group_Conversion_Service() ) )->handle_ajax_issues();
+
+		$response = $GLOBALS['fgc_json_response'];
+		$this->assertTrue( $response['success'] );
+		$this->assertArrayHasKey( 'issues', $response['data'] );
+		$this->assertGreaterThan( 0, $response['data']['errors'] );
+
+		array_map( 'unlink', glob( $dir . '/*' ) );
+		rmdir( $dir );
+	}
 }

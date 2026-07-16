@@ -11,6 +11,8 @@ namespace Field_Group_PHP_JSON_Converter\Admin;
 
 use Field_Group_PHP_JSON_Converter\Services\Field_Group_Conversion_Service;
 use Field_Group_PHP_JSON_Converter\Theme\Theme_Service;
+use Field_Group_PHP_JSON_Converter\Utilities\Field_Group_Validator;
+use Field_Group_PHP_JSON_Converter\Utilities\Validation_Result;
 
 /**
  * Registers the settings/tool page and the conversion handlers used by the
@@ -45,6 +47,14 @@ class Admin {
 	public const THEME_ACTION = 'fgpjc_theme';
 
 	/**
+	 * Action used for the field group issue checks.
+	 *
+	 * @since 2.0.0
+	 * @var string
+	 */
+	public const ISSUES_ACTION = 'fgpjc_issues';
+
+	/**
 	 * Conversion orchestration service.
 	 *
 	 * @since 2.0.0
@@ -61,18 +71,29 @@ class Admin {
 	private Theme_Service $theme_service;
 
 	/**
+	 * Field group validator.
+	 *
+	 * @since 2.0.0
+	 * @var Field_Group_Validator
+	 */
+	private Field_Group_Validator $validator;
+
+	/**
 	 * Inject the conversion service.
 	 *
 	 * @since 2.0.0
 	 * @param Field_Group_Conversion_Service|null $service Conversion service.
 	 * @param Theme_Service|null                  $theme_service Theme service.
+	 * @param Field_Group_Validator|null          $validator Field group validator.
 	 */
 	public function __construct(
 		?Field_Group_Conversion_Service $service = null,
-		?Theme_Service $theme_service = null
+		?Theme_Service $theme_service = null,
+		?Field_Group_Validator $validator = null
 	) {
 		$this->service       = $service ?? new Field_Group_Conversion_Service();
 		$this->theme_service = $theme_service ?? new Theme_Service();
+		$this->validator     = $validator ?? new Field_Group_Validator();
 	}
 
 	/**
@@ -89,6 +110,7 @@ class Admin {
 		add_action( 'wp_ajax_fgpjc_bulk_export', array( $this, 'handle_bulk_export' ) );
 		add_action( 'admin_post_' . self::THEME_ACTION, array( $this, 'handle_post_theme' ) );
 		add_action( 'wp_ajax_' . self::THEME_ACTION, array( $this, 'handle_ajax_theme' ) );
+		add_action( 'wp_ajax_' . self::ISSUES_ACTION, array( $this, 'handle_ajax_issues' ) );
 	}
 
 	/**
@@ -144,11 +166,13 @@ class Admin {
 			'fgpjc-admin',
 			'fgpjcAdmin',
 			array(
-				'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-				'action'      => self::ACTION,
-				'nonce'       => wp_create_nonce( self::ACTION ),
-				'themeAction' => self::THEME_ACTION,
-				'themeNonce'  => wp_create_nonce( self::THEME_ACTION ),
+				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+				'action'       => self::ACTION,
+				'nonce'        => wp_create_nonce( self::ACTION ),
+				'themeAction'  => self::THEME_ACTION,
+				'themeNonce'   => wp_create_nonce( self::THEME_ACTION ),
+				'issuesAction' => self::ISSUES_ACTION,
+				'issuesNonce'  => wp_create_nonce( self::ISSUES_ACTION ),
 			)
 		);
 	}
@@ -194,8 +218,14 @@ class Admin {
 				</div>
 			<?php endif; ?>
 
-			<div class="fgpjc-grid">
-				<section class="fgpjc-section" aria-labelledby="fgpjc-convert-heading">
+			<nav class="fgpjc-tabs" role="tablist" aria-label="<?php echo esc_attr__( 'Converter sections', 'field-group-php-json-converter' ); ?>">
+				<button type="button" class="fgpjc-tab is-active" role="tab" aria-selected="true" aria-controls="fgpjc-panel-convert" id="fgpjc-tab-convert"><?php echo esc_html__( 'Convert', 'field-group-php-json-converter' ); ?></button>
+				<button type="button" class="fgpjc-tab" role="tab" aria-selected="false" aria-controls="fgpjc-panel-theme" id="fgpjc-tab-theme"><?php echo esc_html__( 'Scan theme', 'field-group-php-json-converter' ); ?></button>
+				<button type="button" class="fgpjc-tab" role="tab" aria-selected="false" aria-controls="fgpjc-panel-issues" id="fgpjc-tab-issues"><?php echo esc_html__( 'Field issues', 'field-group-php-json-converter' ); ?></button>
+			</nav>
+
+			<div class="fgpjc-panels">
+				<section class="fgpjc-panel fgpjc-section" id="fgpjc-panel-convert" role="tabpanel" aria-labelledby="fgpjc-tab-convert">
 					<h2 id="fgpjc-convert-heading"><?php echo esc_html__( 'Convert', 'field-group-php-json-converter' ); ?></h2>
 
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="fgpjc-form">
@@ -231,26 +261,26 @@ class Admin {
 
 						<p id="fgpjc-convert-status" class="fgpjc-status" role="status" aria-live="polite"></p>
 					</form>
+
+					<?php if ( $has_acf ) : ?>
+						<section class="fgpjc-subsection" aria-labelledby="fgpjc-acf-heading">
+							<h3 id="fgpjc-acf-heading"><?php echo esc_html__( 'ACF field groups', 'field-group-php-json-converter' ); ?></h3>
+							<p><?php echo esc_html__( 'Export every ACF field group currently registered or saved in the database to a single JSON file, or import a JSON file to generate PHP registration code.', 'field-group-php-json-converter' ); ?></p>
+
+							<p class="fgpjc-actions">
+								<button type="button" class="button" id="fgpjc-bulk-export"><?php echo esc_html__( 'Export all field groups', 'field-group-php-json-converter' ); ?></button>
+								<label class="button">
+									<?php echo esc_html__( 'Import JSON file', 'field-group-php-json-converter' ); ?>
+									<input type="file" id="fgpjc-import-file" accept=".json,application/json" class="fgpjc-import-input">
+								</label>
+							</p>
+
+							<p id="fgpjc-export-status" class="fgpjc-status" role="status" aria-live="polite"></p>
+						</section>
+					<?php endif; ?>
 				</section>
 
-				<?php if ( $has_acf ) : ?>
-					<section class="fgpjc-section" aria-labelledby="fgpjc-acf-heading">
-						<h2 id="fgpjc-acf-heading"><?php echo esc_html__( 'ACF field groups', 'field-group-php-json-converter' ); ?></h2>
-						<p><?php echo esc_html__( 'Export every ACF field group currently registered or saved in the database to a single JSON file, or import a JSON file to generate PHP registration code.', 'field-group-php-json-converter' ); ?></p>
-
-						<p class="fgpjc-actions">
-							<button type="button" class="button" id="fgpjc-bulk-export"><?php echo esc_html__( 'Export all field groups', 'field-group-php-json-converter' ); ?></button>
-							<label class="button">
-								<?php echo esc_html__( 'Import JSON file', 'field-group-php-json-converter' ); ?>
-								<input type="file" id="fgpjc-import-file" accept=".json,application/json" class="fgpjc-import-input">
-							</label>
-						</p>
-
-						<p id="fgpjc-export-status" class="fgpjc-status" role="status" aria-live="polite"></p>
-					</section>
-				<?php endif; ?>
-
-				<section class="fgpjc-section" aria-labelledby="fgpjc-theme-heading">
+				<section class="fgpjc-panel fgpjc-section" id="fgpjc-panel-theme" role="tabpanel" aria-labelledby="fgpjc-tab-theme" hidden>
 					<h2 id="fgpjc-theme-heading"><?php echo esc_html__( 'Scan active theme', 'field-group-php-json-converter' ); ?></h2>
 					<p><?php echo esc_html__( 'Discover every ACF field group the active theme registers in PHP or stores as Local JSON, then convert between the two formats.', 'field-group-php-json-converter' ); ?></p>
 
@@ -308,6 +338,21 @@ class Admin {
 						<p><strong><?php echo esc_html__( 'Skipped groups', 'field-group-php-json-converter' ); ?></strong></p>
 						<ul></ul>
 					</div>
+				</section>
+
+				<section class="fgpjc-panel fgpjc-section" id="fgpjc-panel-issues" role="tabpanel" aria-labelledby="fgpjc-tab-issues" hidden>
+					<h2 id="fgpjc-issues-heading"><?php echo esc_html__( 'Field issues', 'field-group-php-json-converter' ); ?></h2>
+					<p><?php echo esc_html__( 'Checks the ACF environment, the snippet on the Convert tab, the active theme, and the database for malformed or duplicate field groups and unsupported field types.', 'field-group-php-json-converter' ); ?></p>
+
+					<p class="fgpjc-actions">
+						<button type="button" class="button button-primary" id="fgpjc-check-issues"><?php echo esc_html__( 'Check for issues', 'field-group-php-json-converter' ); ?></button>
+					</p>
+
+					<p id="fgpjc-issues-status" class="fgpjc-status" role="status" aria-live="polite"></p>
+
+					<div id="fgpjc-issues-summary" class="fgpjc-issues-summary" hidden></div>
+
+					<ul id="fgpjc-issues-list" class="fgpjc-issues-list"></ul>
 				</section>
 			</div>
 		</div>
@@ -528,6 +573,89 @@ class Admin {
 	 */
 	private function verify_theme_request(): bool {
 		if ( ! check_ajax_referer( self::THEME_ACTION, '_wpnonce', false ) ) {
+			return false;
+		}
+
+		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Run every field-group issue check and return the aggregated results.
+	 *
+	 * Accepts an optional "source" snippet and its "format" so the pasted
+	 * content on the Convert tab can also be validated.
+	 *
+	 * @since 2.0.0
+	 * @return array
+	 */
+	public function handle_ajax_issues(): array {
+		if ( ! $this->verify_issues_request() ) {
+			return wp_send_json_error( array( 'message' => __( 'Invalid request.', 'field-group-php-json-converter' ) ), 403 );
+		}
+
+		$source = isset( $_POST['source'] ) ? (string) wp_unslash( $_POST['source'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$format = isset( $_POST['format'] ) ? sanitize_key( wp_unslash( $_POST['format'] ) ) : 'php'; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		if ( ! in_array( $format, array( 'php', 'json' ), true ) ) {
+			$format = 'php';
+		}
+
+		$result = new Validation_Result();
+
+		$env = $this->validator->validate_environment();
+		foreach ( $env->get_issues() as $issue ) {
+			$result->add_issue( $issue['severity'], $issue['message'], $issue['context'] );
+		}
+
+		if ( '' !== trim( $source ) ) {
+			$snippet = $this->validator->validate_source( $source, $format );
+			foreach ( $snippet->get_issues() as $issue ) {
+				$result->add_issue( $issue['severity'], $issue['message'], $issue['context'] );
+			}
+		}
+
+		$scan  = $this->theme_service->scan_theme();
+		$theme = $this->validator->validate_scan_items( $scan->get_groups() );
+		foreach ( $theme->get_issues() as $issue ) {
+			$result->add_issue( $issue['severity'], $issue['message'], $issue['context'] );
+		}
+
+		$db = $this->validator->validate_db_groups();
+		foreach ( $db->get_issues() as $issue ) {
+			$result->add_issue( $issue['severity'], $issue['message'], $issue['context'] );
+		}
+
+		if ( ! $result->has_issues() ) {
+			$result->add_issue( 'ok', __( 'No issues were detected.', 'field-group-php-json-converter' ) );
+		}
+
+		$errors   = 0;
+		$warnings = 0;
+		foreach ( $result->get_issues() as $issue ) {
+			if ( 'error' === $issue['severity'] ) {
+				++$errors;
+			} elseif ( 'warning' === $issue['severity'] ) {
+				++$warnings;
+			}
+		}
+
+		return wp_send_json_success(
+			array(
+				'issues'   => $result->get_issues(),
+				'errors'   => $errors,
+				'warnings' => $warnings,
+			)
+		);
+	}
+
+	/**
+	 * Verify an issues request's nonce and capability.
+	 *
+	 * @since 2.0.0
+	 * @return bool
+	 */
+	private function verify_issues_request(): bool {
+		if ( ! check_ajax_referer( self::ISSUES_ACTION, '_wpnonce', false ) ) {
 			return false;
 		}
 
